@@ -32,6 +32,11 @@ The product is research-only decision support. It should not issue direct buy/se
 - Current scaffold includes Next.js web app shell, FastAPI API skeleton, Docker Compose, environment example, and local data directories.
 - npm registry has been reset to the public npm registry for local installs.
 - Frontend dependencies were installed locally, producing `apps/web/package-lock.json`.
+- Backend dependencies were installed locally in `services/api/.venv`.
+- Backend package now supports local Python 3.10+ while the Docker image still uses Python 3.12.
+- FastAPI/TestClient dependency stack is pinned for local stability: FastAPI `0.115.6`, Starlette `0.41.x`, Uvicorn `0.30.x`, AnyIO `3.7.x`, and HTTPX `0.27.x`.
+- `services/api/README.md` now contains comprehensive local setup, Docker Compose, verification, testing, and troubleshooting instructions.
+- Current backend setup commit: `71d6acc` (`Set up backend local dependencies`).
 
 ## Decisions From Questionnaire
 
@@ -156,12 +161,12 @@ The architecture recommendation has been accepted:
 
 The next work is implementing the first backend vertical slice:
 
-1. Install backend Python dependencies in `services/api`.
-2. Add SQLAlchemy models and Alembic migrations for the MVP tables.
-3. Implement manual article text ingestion.
-4. Persist analysis and article records in PostgreSQL.
-5. Add market data provider interface implementation with `yfinance`.
-6. Implement baseline sentiment and forecast services.
+1. Add SQLAlchemy models and Alembic migrations for the MVP tables.
+2. Implement manual article text ingestion.
+3. Persist analysis and article records in PostgreSQL.
+4. Add market data provider interface implementation with `yfinance`.
+5. Implement baseline sentiment and forecast services.
+6. Add tests for persisted create/read analysis paths.
 
 ## Suggested Recommendation To Explore Next
 
@@ -190,5 +195,6 @@ When resuming:
 5. Inspect `apps/web`, `services/api`, `infra`, and `data`.
 6. Run or install dependencies as needed:
    - `cd apps/web && npm install`
-   - `cd services/api && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"`
-7. Continue with the backend vertical slice: database models, migrations, manual text ingestion, and persisted analyses.
+   - backend venv should already exist at `services/api/.venv`; if rebuilding: `cd services/api && python3 -m venv .venv && source .venv/bin/activate && python -m pip install -e ".[dev]"`
+7. Verify backend tests with `cd services/api && source .venv/bin/activate && python -m pytest`.
+8. Continue with the backend vertical slice: database models, migrations, manual text ingestion, and persisted analyses.
