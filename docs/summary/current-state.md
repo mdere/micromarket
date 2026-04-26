@@ -53,6 +53,10 @@ The product is research-only decision support. It should not issue direct buy/se
   - `POST /analyses` fetches a quote through dependency injection, persists it in `market_quotes`, and returns quote metadata in the response.
   - `market_quotes.analysis_id` has been added through Alembic revision `20260426_0002` so quote snapshots are tied to the analysis that used them.
   - API tests use a fake market-data provider so unit tests stay offline and deterministic.
+- Baseline sentiment slice has started:
+  - `app/sentiment/baseline.py` implements a deterministic lexicon-based sentiment provider.
+  - `POST /analyses` scores each persisted manual article, writes `sentiment_runs`, creates one `sentiment_aggregate`, and returns sentiment metadata.
+  - Tests cover positive, negative, and neutral baseline sentiment behavior.
 
 ## Decisions From Questionnaire
 
@@ -183,8 +187,9 @@ The current work is implementing the first backend vertical slice:
 4. Jupyter notebook research workspace is in place for model/data exploration.
 5. Market data provider implementation with `yfinance` is in place.
 6. Market quote records are persisted and wired into `POST /analyses`.
-7. Next: implement baseline sentiment and forecast services.
-8. Then broaden persisted create/read tests as forecasts and sentiment records land.
+7. Baseline sentiment provider and persistence are in place.
+8. Next: implement baseline forecast service and persisted forecast records.
+9. Then broaden persisted create/read tests as forecast records land.
 
 ## Suggested Recommendation To Explore Next
 
@@ -219,4 +224,4 @@ When resuming:
 8. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
 9. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
 10. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
-11. Continue with the backend vertical slice: baseline sentiment, baseline forecasts, and persisted forecast records.
+11. Continue with the backend vertical slice: baseline forecasts and persisted forecast records.

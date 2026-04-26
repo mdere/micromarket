@@ -39,6 +39,33 @@ class MarketQuoteResponse(BaseModel):
     retrieved_at: str
 
 
+class SentimentRunResponse(BaseModel):
+    id: str
+    article_id: str
+    provider: str
+    model_name: str
+    model_version: str
+    sentiment_label: str
+    sentiment_score: str
+    confidence_score: str
+    drivers: list[str] = Field(default_factory=list)
+    evidence_snippets: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+
+
+class SentimentAggregateResponse(BaseModel):
+    article_count: int
+    included_article_count: int
+    positive_count: int
+    neutral_count: int
+    negative_count: int
+    mixed_count: int
+    aggregate_score: str | None
+    agreement_score: str | None
+    evidence_strength_score: str | None
+    summary: str | None
+
+
 class AnalysisResponse(BaseModel):
     id: str
     ticker: str
@@ -49,3 +76,5 @@ class AnalysisResponse(BaseModel):
     limitations: list[str] = Field(default_factory=list)
     articles: list[ArticleResponse] = Field(default_factory=list)
     market_quote: MarketQuoteResponse | None = None
+    sentiment_runs: list[SentimentRunResponse] = Field(default_factory=list)
+    sentiment_aggregate: SentimentAggregateResponse | None = None

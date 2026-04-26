@@ -33,6 +33,7 @@ data/reports/**
 !data/processed/.gitkeep
 !data/artifacts/.gitkeep
 !data/reports/.gitkeep
+services/api/data/**
 
 # OS/editor
 .DS_Store

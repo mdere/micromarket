@@ -9,6 +9,8 @@ class SentimentResult:
     confidence: float
     drivers: list[str] = field(default_factory=list)
     evidence_snippets: list[str] = field(default_factory=list)
+    limitations: list[str] = field(default_factory=list)
+    provider: str = "baseline"
     model_name: str = "sentiment-baseline"
     model_version: str = "0.1.0"
 

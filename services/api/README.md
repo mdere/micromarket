@@ -16,6 +16,62 @@ storage during MVP development.
 The local package currently supports Python 3.10+. The Docker image uses Python
 3.12.
 
+## Quick Start
+
+From the repository root, start PostgreSQL:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d db
+```
+
+Set up and run the API:
+
+```bash
+cd services/api
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+The API will listen on `http://localhost:8000`.
+
+In another terminal, verify it:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Create a sample analysis:
+
+```bash
+curl -X POST http://localhost:8000/analyses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticker": "SPY",
+    "articles": [
+      {
+        "title": "SPY sample article",
+        "source": "manual note",
+        "text": "SPY saw improving breadth and resilient demand across large caps. Analysts described constructive momentum, although volatility risk remains."
+      }
+    ]
+  }'
+```
+
+The response should include:
+
+- persisted article metadata,
+- a `market_quote` snapshot from `yfinance`,
+- one baseline `sentiment_runs` record,
+- one `sentiment_aggregate` summary.
+
+If `POST /analyses` returns a provider error, confirm your network can reach
+Yahoo Finance through `yfinance`. Unit tests use a fake provider and do not need
+network access.
+
 ## Environment
 
 Settings are read from environment variables and, when running from this
@@ -56,6 +112,7 @@ Then start the API:
 ```bash
 cd services/api
 source .venv/bin/activate
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
@@ -102,9 +159,10 @@ Current API endpoints:
 
 The analysis route now persists manual text submissions, stores article text
 artifacts, fetches a `yfinance` market quote through the provider interface,
-persists the quote snapshot, and returns stored analysis/article/quote metadata.
-Sentiment, forecasting, URL extraction, and evaluation routes are still
-scaffold-level or provider-interface work.
+persists the quote snapshot, scores article sentiment with the baseline
+provider, persists sentiment runs and an aggregate, and returns stored
+analysis/article/quote/sentiment metadata. Forecasting, URL extraction, and
+evaluation routes are still scaffold-level or provider-interface work.
 
 Run database migrations from `services/api`:
 
@@ -137,9 +195,10 @@ python -m ruff check app tests
 - Provider protocols live under `app/market_data`, `app/sentiment`, and
   `app/forecasting`.
 - The initial market-data implementation is `app/market_data/yfinance_provider.py`.
+- The initial sentiment implementation is `app/sentiment/baseline.py`.
 
-The next backend milestone is adding baseline sentiment and forecast services
-that consume persisted articles and market quote snapshots.
+The next backend milestone is adding a baseline forecast service that consumes
+persisted articles, sentiment aggregates, and market quote snapshots.
 
 ## Market Data Provider
 
@@ -213,6 +272,32 @@ fail because of network or upstream data issues. For that reason:
 - Use deterministic fake providers in tests.
 - Revisit the provider boundary before adding paid or higher-reliability data
   sources.
+
+## Sentiment Provider
+
+The MVP sentiment provider is `BaselineSentimentProvider` in
+`app/sentiment/baseline.py`.
+
+It is intentionally deterministic and transparent. It uses a small positive and
+negative financial-language lexicon to produce:
+
+- `sentiment_label`: `positive`, `neutral`, or `negative`
+- `sentiment_score`: normalized from `-1.0` to `1.0`
+- `confidence_score`: bounded confidence based on number of matched terms
+- `drivers`: matched positive and negative term groups
+- `evidence_snippets`: up to three matching sentences
+- `limitations`: notes such as no matched terms or very short text
+- `model_name` and `model_version`
+
+During `POST /analyses`, the API stores one `sentiment_runs` row per article and
+one `sentiment_aggregates` row for the analysis. The aggregate stores article
+counts, positive/neutral/negative/mixed counts, aggregate score, agreement
+score, evidence-strength score, and a short summary.
+
+This baseline is not intended to be the final model. It gives the project a
+repeatable measurement floor before introducing FinBERT, LLM-assisted sentiment,
+or a custom model. Future providers should continue to satisfy the local
+`SentimentProvider` protocol and store model/provider versions with every run.
 
 ## Troubleshooting
 

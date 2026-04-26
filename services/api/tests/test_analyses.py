@@ -81,6 +81,11 @@ def test_create_and_get_analysis(tmp_path) -> None:
         assert created["primary_horizon"] == "3_trading_days"
         assert created["market_quote"]["provider"] == "fake-market-data"
         assert created["market_quote"]["price"] == "512.340000"
+        assert created["sentiment_runs"][0]["provider"] == "baseline"
+        assert created["sentiment_runs"][0]["sentiment_label"] == "positive"
+        assert created["sentiment_aggregate"]["article_count"] == 1
+        assert created["sentiment_aggregate"]["positive_count"] == 1
+        assert created["sentiment_aggregate"]["aggregate_score"] == "1.00000"
         assert created["articles"][0]["word_count"] == 10
         artifact_path = created["articles"][0]["raw_artifact_path"]
         assert artifact_path is not None
@@ -91,6 +96,9 @@ def test_create_and_get_analysis(tmp_path) -> None:
         assert fetched.status_code == 200
         assert fetched.json()["id"] == created["id"]
         assert fetched.json()["market_quote"]["volume"] == 1234567
+        assert fetched.json()["sentiment_aggregate"]["summary"].startswith(
+            "Baseline sentiment is positive"
+        )
         assert fetched.json()["articles"][0]["content_hash"] == created["articles"][0]["content_hash"]
     finally:
         app.dependency_overrides.clear()
