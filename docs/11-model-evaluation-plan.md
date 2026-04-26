@@ -143,6 +143,21 @@ Stronger MVP outcome:
 6. System creates `forecast_outcomes`.
 7. Evaluation summary updates aggregate metrics.
 
+## Notebook-Assisted Evaluation
+
+Jupyter notebooks are recommended for the MVP evaluation workflow because early model work will require fast inspection and iteration before logic is stable enough to become API code.
+
+Use notebooks to:
+
+- inspect whether `yfinance` quote/history data is usable for selected equities and ETFs,
+- compare sentiment distributions across articles and tickers,
+- tune baseline forecast weights,
+- inspect confidence calibration by bucket,
+- compare the forecast model against no-change, momentum, and sentiment-only baselines,
+- create charts and tables for local evaluation reports.
+
+Notebook outputs should not be the system of record. Forecasts, outcomes, model versions, and provider metadata should remain in PostgreSQL. Reports or charts generated from notebooks can be stored under `data/reports`, while stable model logic should be promoted into tested backend modules.
+
 ## Evaluation API
 
 ### `POST /evaluations/refresh`

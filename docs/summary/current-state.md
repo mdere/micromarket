@@ -170,9 +170,11 @@ The current work is implementing the first backend vertical slice:
 1. SQLAlchemy models and Alembic migrations for the MVP tables are in place.
 2. Manual article text ingestion now stores normalized text artifacts.
 3. Analysis and article records are persisted through the API.
-4. Next: add the market data provider implementation with `yfinance`.
-5. Then implement baseline sentiment and forecast services.
-6. Then broaden persisted create/read tests as forecasts and sentiment records land.
+4. Decision: add a Jupyter notebook research workspace before implementing more model/provider logic.
+5. Next: create `notebooks/` with starter notebooks for market data exploration, sentiment baseline inspection, forecast baseline calibration, and evaluation analysis.
+6. Then add the market data provider implementation with `yfinance`.
+7. Then implement baseline sentiment and forecast services.
+8. Then broaden persisted create/read tests as forecasts and sentiment records land.
 
 ## Suggested Recommendation To Explore Next
 
@@ -180,6 +182,7 @@ The current recommended architecture is:
 
 - Next.js for SSR UI and light orchestration.
 - FastAPI/Python for ingestion, sentiment, forecasting, and model evaluation.
+- Jupyter notebooks should be added as an MVP research workspace for data science exploration, baseline tuning, and evaluation analysis. They are not part of the production runtime.
 - PostgreSQL for structured records.
 - Local filesystem for raw article/model artifacts.
 - S3-compatible archive later.
@@ -205,4 +208,5 @@ When resuming:
 7. Verify backend tests with `cd services/api && source .venv/bin/activate && python -m pytest`.
 8. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
 9. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
-10. Continue with the backend vertical slice: market data provider, baseline sentiment, baseline forecasts, and persisted forecast records.
+10. Continue with Phase 1.5: add the notebook research workspace and setup instructions.
+11. Then resume the backend vertical slice: market data provider, baseline sentiment, baseline forecasts, and persisted forecast records.

@@ -243,6 +243,7 @@ This option fits the real risk profile of micromarket:
 
 - The hardest work is data ingestion, sentiment quality, forecast evaluation, and explainability.
 - Python should own the model/data path because it reduces friction.
+- Jupyter notebooks should support exploratory data science, baseline tuning, and evaluation analysis without becoming part of the production runtime.
 - Next.js gives you the SSR product shell you want without forcing the ML pipeline into Node.js.
 - It keeps Go optional instead of mandatory.
 - It supports local-only deployment now and home-server deployment later.
@@ -265,6 +266,12 @@ FastAPI
 - forecast pipeline
 - snapshot API
 - evaluation API
+
+Jupyter notebooks
+- market-data exploration
+- sentiment baseline inspection
+- forecast-weight calibration
+- model evaluation reports
 
 PostgreSQL
 - tickers
@@ -305,9 +312,11 @@ micromarket/
     api/                  # FastAPI backend
   packages/
     shared-contracts/     # Optional generated/openapi types later
+  notebooks/              # Exploratory data science, not production runtime
   data/
     raw/                  # local raw article text/html
     artifacts/            # model outputs, experiment artifacts
+    reports/              # notebook/evaluation reports
   infra/
     docker-compose.yml    # PostgreSQL + app services
   docs/
@@ -458,11 +467,12 @@ Recommended path:
 1. Build with Next.js + FastAPI.
 2. Use PostgreSQL.
 3. Store raw artifacts locally.
-4. Use `yfinance` behind a provider interface.
-5. Start with manual text upload and pasted URLs.
-6. Use 3 trading days as the primary forecast horizon.
-7. Store next-close and 7-day forecasts too for evaluation.
-8. Keep Go out of MVP but reserve service boundaries for later.
+4. Add Jupyter notebooks as a research workspace for data inspection, baseline tuning, and evaluation.
+5. Use `yfinance` behind a provider interface.
+6. Start with manual text upload and pasted URLs.
+7. Use 3 trading days as the primary forecast horizon.
+8. Store next-close and 7-day forecasts too for evaluation.
+9. Keep Go out of MVP but reserve service boundaries for later.
 
 ## Next Documents To Create
 

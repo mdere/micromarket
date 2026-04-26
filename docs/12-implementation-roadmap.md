@@ -45,6 +45,26 @@ Acceptance criteria:
 - Database schema supports the MVP data model.
 - Tests cover basic create/read paths.
 
+## Phase 1.5: Research Notebook Workspace
+
+Deliverables:
+
+- Add a `notebooks/` workspace for exploratory data science.
+- Add notebook setup instructions and optional research dependencies.
+- Create starter notebooks for:
+  - market data exploration,
+  - sentiment baseline inspection,
+  - forecast baseline calibration,
+  - evaluation analysis.
+- Establish the promotion rule: notebooks are for exploration; stable logic moves into tested backend modules.
+
+Acceptance criteria:
+
+- A notebook can read local API/database outputs or exported sample data.
+- Notebook-generated reports can be saved under `data/reports`.
+- No production API behavior depends on manually running a notebook.
+- Secrets and local notebook checkpoints are ignored by Git.
+
 ## Phase 2: Article Ingestion
 
 Deliverables:
@@ -187,14 +207,15 @@ Only after this works should the UI and URL ingestion expand.
 
 1. Backend health/database.
 2. Data model and migrations.
-3. Manual text ingestion.
-4. Market data provider.
-5. Baseline sentiment.
-6. Baseline forecast.
-7. Evaluation storage.
-8. Minimal Next.js UI.
-9. URL ingestion.
-10. Evaluation refresh.
+3. Research notebook workspace.
+4. Manual text ingestion.
+5. Market data provider.
+6. Baseline sentiment.
+7. Baseline forecast.
+8. Evaluation storage.
+9. Minimal Next.js UI.
+10. URL ingestion.
+11. Evaluation refresh.
 
 ## Risks
 
@@ -205,6 +226,7 @@ Mitigation:
 - Store all runs.
 - Compare to baselines.
 - Treat early forecasts as experiments.
+- Use notebooks to inspect failures, tune baseline parameters, and validate confidence calibration before promoting changes into API code.
 
 ### Article Extraction Is Unreliable
 

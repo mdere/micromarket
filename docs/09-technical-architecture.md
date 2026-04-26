@@ -6,11 +6,14 @@ micromarket MVP will use:
 
 - Next.js for the server-rendered web UI.
 - FastAPI/Python for ingestion, sentiment, forecasting, and evaluation APIs.
+- Jupyter notebooks for exploratory data science, feature inspection, model calibration, and evaluation analysis.
 - PostgreSQL for structured application and model-run data.
 - Local filesystem storage for raw article text, fetched article content, model artifacts, and evaluation reports.
 - Optional S3-compatible archive later.
 
 Go is intentionally deferred. It can be added later for a stable API gateway, high-concurrency provider orchestration, or durable daemon services once those needs are measured.
+
+Jupyter is part of the MVP development and research workflow, not the production runtime. Notebooks should read from PostgreSQL and local artifacts, produce exploratory reports or model parameters, and then promote stable logic into tested Python modules under `services/api/app`.
 
 ## System Shape
 
@@ -51,6 +54,11 @@ micromarket/
         storage/
       tests/
       pyproject.toml
+  notebooks/
+    01_market_data_exploration.ipynb
+    02_sentiment_baseline.ipynb
+    03_forecast_baseline.ipynb
+    04_evaluation_analysis.ipynb
   data/
     raw/
     processed/
@@ -95,6 +103,23 @@ Responsibilities:
 - Persist all run metadata.
 - Provide evaluation endpoints.
 
+### Jupyter Notebooks
+
+Responsibilities:
+
+- Explore market data quality, coverage, gaps, and quirks from providers such as `yfinance`.
+- Inspect article text normalization, duplicate detection, sentiment drivers, and evidence snippets.
+- Prototype baseline sentiment and forecast formulas before moving stable code into `services/api/app`.
+- Analyze forecast outcomes, confidence calibration, and model-vs-baseline performance.
+- Generate local evaluation reports under `data/reports`.
+
+Non-responsibilities:
+
+- No production API endpoints.
+- No hidden source of forecast logic that is not represented in versioned backend code.
+- No manual database edits required for the app to work.
+- No secrets or personal financial context committed to notebooks.
+
 ### PostgreSQL
 
 Responsibilities:
@@ -112,6 +137,7 @@ Responsibilities:
 - Store fetched article HTML/text.
 - Store generated summaries or extraction artifacts if needed.
 - Store model artifacts and evaluation reports.
+- Store notebook-generated exploratory outputs and charts under `data/reports` or `data/artifacts`.
 
 Structured database rows should point to artifact paths rather than storing large raw text blobs everywhere.
 
@@ -129,6 +155,17 @@ Structured database rows should point to artifact paths rather than storing larg
 8. FastAPI generates forecast and confidence.
 9. FastAPI stores full analysis lineage.
 10. Next.js renders the result.
+
+### Data Science Workflow
+
+1. FastAPI stores analyses, articles, sentiment runs, forecasts, outcomes, and artifact paths.
+2. A notebook connects to the same local PostgreSQL database or reads exported data.
+3. The notebook inspects data quality, model behavior, feature weights, confidence calibration, and baseline comparisons.
+4. Useful findings become:
+   - adjusted model parameters recorded in `model_versions`,
+   - tested Python code in `services/api/app/sentiment`, `services/api/app/forecasting`, or `services/api/app/evaluation`,
+   - evaluation reports saved under `data/reports`.
+5. The API remains the source of truth for repeatable analysis execution.
 
 ### Pasted URL Analysis
 
@@ -262,6 +299,7 @@ MVP local deployment should use Docker Compose:
 - `api`: FastAPI service.
 - `db`: PostgreSQL.
 - Optional `pgadmin` or admin tooling later.
+- Optional `notebooks` profile later for Jupyter if running notebooks on the home server is useful.
 
 Local development can run services directly before containerization if faster.
 
