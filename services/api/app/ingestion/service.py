@@ -17,11 +17,13 @@ class ArticleIngestionService:
     URL fetching and extraction will be implemented after the first manual-text vertical slice.
     """
 
-    def normalize_text(self, text: str, title: str | None = None) -> NormalizedArticle:
+    def normalize_text(
+        self, text: str, title: str | None = None, source: str | None = None
+    ) -> NormalizedArticle:
         cleaned = " ".join(text.split())
         return NormalizedArticle(
             title=title,
-            source="manual",
+            source=source or "manual",
             url=None,
             text=cleaned,
             content_hash=sha256(cleaned.encode("utf-8")).hexdigest(),

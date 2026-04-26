@@ -91,16 +91,25 @@ Expected response shape:
 }
 ```
 
-Current scaffold endpoints:
+Current API endpoints:
 
 - `GET /health`
 - `POST /analyses`
 - `GET /analyses/{analysis_id}`
+- `GET /analyses`
 - `POST /evaluations/refresh`
 - `GET /evaluations/summary`
 
-The analysis and evaluation routes are still scaffold-level until database
-models, migrations, and the first ingestion pipeline are implemented.
+The analysis route now persists manual text submissions, stores article text
+artifacts, and returns the stored analysis/article metadata. Sentiment,
+forecasting, market data, URL extraction, and evaluation routes are still
+scaffold-level or provider-interface work.
+
+Run database migrations from `services/api`:
+
+```bash
+alembic upgrade head
+```
 
 ## Tests And Linting
 

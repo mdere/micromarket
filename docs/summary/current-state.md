@@ -37,6 +37,12 @@ The product is research-only decision support. It should not issue direct buy/se
 - FastAPI/TestClient dependency stack is pinned for local stability: FastAPI `0.115.6`, Starlette `0.41.x`, Uvicorn `0.30.x`, AnyIO `3.7.x`, and HTTPX `0.27.x`.
 - `services/api/README.md` now contains comprehensive local setup, Docker Compose, verification, testing, and troubleshooting instructions.
 - Current backend setup commit: `71d6acc` (`Set up backend local dependencies`).
+- The first backend persistence slice is now implemented in the working tree:
+  - SQLAlchemy MVP models exist under `services/api/app/db/models.py`.
+  - Alembic is configured under `services/api/alembic`.
+  - `POST /analyses` persists manual text analyses, assets, articles, analysis/article joins, and raw text artifacts.
+  - `GET /analyses/{analysis_id}` and `GET /analyses` return persisted analysis/article metadata.
+  - Focused API tests cover manual text create/read and empty evidence validation.
 
 ## Decisions From Questionnaire
 
@@ -159,14 +165,14 @@ The architecture recommendation has been accepted:
 - Optional S3-compatible archive later.
 - Go deferred until a specific service boundary needs it.
 
-The next work is implementing the first backend vertical slice:
+The current work is implementing the first backend vertical slice:
 
-1. Add SQLAlchemy models and Alembic migrations for the MVP tables.
-2. Implement manual article text ingestion.
-3. Persist analysis and article records in PostgreSQL.
-4. Add market data provider interface implementation with `yfinance`.
-5. Implement baseline sentiment and forecast services.
-6. Add tests for persisted create/read analysis paths.
+1. SQLAlchemy models and Alembic migrations for the MVP tables are in place.
+2. Manual article text ingestion now stores normalized text artifacts.
+3. Analysis and article records are persisted through the API.
+4. Next: add the market data provider implementation with `yfinance`.
+5. Then implement baseline sentiment and forecast services.
+6. Then broaden persisted create/read tests as forecasts and sentiment records land.
 
 ## Suggested Recommendation To Explore Next
 
@@ -197,4 +203,6 @@ When resuming:
    - `cd apps/web && npm install`
    - backend venv should already exist at `services/api/.venv`; if rebuilding: `cd services/api && python3 -m venv .venv && source .venv/bin/activate && python -m pip install -e ".[dev]"`
 7. Verify backend tests with `cd services/api && source .venv/bin/activate && python -m pytest`.
-8. Continue with the backend vertical slice: database models, migrations, manual text ingestion, and persisted analyses.
+8. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
+9. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
+10. Continue with the backend vertical slice: market data provider, baseline sentiment, baseline forecasts, and persisted forecast records.
