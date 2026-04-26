@@ -43,6 +43,16 @@ The product is research-only decision support. It should not issue direct buy/se
   - `POST /analyses` persists manual text analyses, assets, articles, analysis/article joins, and raw text artifacts.
   - `GET /analyses/{analysis_id}` and `GET /analyses` return persisted analysis/article metadata.
   - Focused API tests cover manual text create/read and empty evidence validation.
+- Phase 1.5 notebook research workspace has been added:
+  - `notebooks/README.md` documents setup, usage, and promotion rules.
+  - Starter notebooks cover market data exploration, sentiment baseline inspection, forecast baseline calibration, and evaluation analysis.
+  - `data/samples/sample_analysis_export.json` provides repeatable sample data before the database has enough real runs.
+  - `services/api` now has an optional `notebooks` dependency group for Jupyter, ipykernel, pandas, and matplotlib.
+- Market data provider slice has started:
+  - `app/market_data/yfinance_provider.py` implements a `yfinance` quote provider behind the provider protocol.
+  - `POST /analyses` fetches a quote through dependency injection, persists it in `market_quotes`, and returns quote metadata in the response.
+  - `market_quotes.analysis_id` has been added through Alembic revision `20260426_0002` so quote snapshots are tied to the analysis that used them.
+  - API tests use a fake market-data provider so unit tests stay offline and deterministic.
 
 ## Decisions From Questionnaire
 
@@ -170,10 +180,10 @@ The current work is implementing the first backend vertical slice:
 1. SQLAlchemy models and Alembic migrations for the MVP tables are in place.
 2. Manual article text ingestion now stores normalized text artifacts.
 3. Analysis and article records are persisted through the API.
-4. Decision: add a Jupyter notebook research workspace before implementing more model/provider logic.
-5. Next: create `notebooks/` with starter notebooks for market data exploration, sentiment baseline inspection, forecast baseline calibration, and evaluation analysis.
-6. Then add the market data provider implementation with `yfinance`.
-7. Then implement baseline sentiment and forecast services.
+4. Jupyter notebook research workspace is in place for model/data exploration.
+5. Market data provider implementation with `yfinance` is in place.
+6. Market quote records are persisted and wired into `POST /analyses`.
+7. Next: implement baseline sentiment and forecast services.
 8. Then broaden persisted create/read tests as forecasts and sentiment records land.
 
 ## Suggested Recommendation To Explore Next
@@ -208,5 +218,5 @@ When resuming:
 7. Verify backend tests with `cd services/api && source .venv/bin/activate && python -m pytest`.
 8. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
 9. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
-10. Continue with Phase 1.5: add the notebook research workspace and setup instructions.
-11. Then resume the backend vertical slice: market data provider, baseline sentiment, baseline forecasts, and persisted forecast records.
+10. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
+11. Continue with the backend vertical slice: baseline sentiment, baseline forecasts, and persisted forecast records.

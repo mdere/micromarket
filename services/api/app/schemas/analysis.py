@@ -25,6 +25,20 @@ class ArticleResponse(BaseModel):
     raw_artifact_path: str | None
 
 
+class MarketQuoteResponse(BaseModel):
+    id: str
+    provider: str
+    price: str | None
+    previous_close: str | None
+    open: str | None
+    day_high: str | None
+    day_low: str | None
+    volume: int | None
+    market_cap: int | None
+    quote_time: str | None
+    retrieved_at: str
+
+
 class AnalysisResponse(BaseModel):
     id: str
     ticker: str
@@ -34,3 +48,4 @@ class AnalysisResponse(BaseModel):
     message: str
     limitations: list[str] = Field(default_factory=list)
     articles: list[ArticleResponse] = Field(default_factory=list)
+    market_quote: MarketQuoteResponse | None = None

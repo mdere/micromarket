@@ -1,13 +1,14 @@
-from datetime import timezone
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import Settings, get_settings
-from app.db.models import Analysis, AnalysisArticle, Article, Asset, utc_now
+from app.db.models import Analysis, AnalysisArticle, Article, Asset, MarketQuote, utc_now
 from app.db.session import get_db
 from app.ingestion.service import ArticleIngestionService
+from app.market_data.dependencies import get_market_data_provider
+from app.market_data.provider import MarketDataProvider
+from app.market_data.yfinance_provider import MarketDataProviderError
 from app.schemas.analysis import AnalysisCreate, AnalysisResponse
 from app.storage import ArtifactStore
 
@@ -19,6 +20,7 @@ def create_analysis(
     payload: AnalysisCreate,
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
 ) -> AnalysisResponse:
     ticker = payload.ticker.upper().strip()
     manual_articles = [article for article in payload.articles if article.text and article.text.strip()]
@@ -48,6 +50,36 @@ def create_analysis(
     )
     db.add(analysis)
     db.flush()
+
+    try:
+        quote = market_data_provider.get_quote(ticker)
+    except MarketDataProviderError as exc:
+        analysis.status = "failed"
+        analysis.error_message = str(exc)
+        db.commit()
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    db.add(
+        MarketQuote(
+            asset_id=asset.id,
+            analysis_id=analysis.id,
+            provider=quote.provider,
+            price=quote.price,
+            previous_close=quote.previous_close,
+            open=quote.open,
+            day_high=quote.day_high,
+            day_low=quote.day_low,
+            volume=quote.volume,
+            market_cap=quote.market_cap,
+            fifty_two_week_high=quote.fifty_two_week_high,
+            fifty_two_week_low=quote.fifty_two_week_low,
+            moving_average_50=quote.moving_average_50,
+            moving_average_200=quote.moving_average_200,
+            beta=quote.beta,
+            pe_ratio=quote.pe_ratio,
+            quote_time=quote.quote_time,
+        )
+    )
 
     ingestion = ArticleIngestionService()
     artifacts = ArtifactStore(settings.artifact_root)
@@ -100,6 +132,7 @@ def list_analyses(db: Session = Depends(get_db)) -> list[AnalysisResponse]:
     analyses = db.scalars(
         select(Analysis)
         .options(selectinload(Analysis.asset), selectinload(Analysis.articles))
+        .options(selectinload(Analysis.market_quotes))
         .order_by(Analysis.created_at.desc())
         .limit(25)
     ).all()
@@ -110,7 +143,11 @@ def _get_analysis(db: Session, analysis_id: str) -> Analysis:
     analysis = db.scalar(
         select(Analysis)
         .where(Analysis.id == analysis_id)
-        .options(selectinload(Analysis.asset), selectinload(Analysis.articles))
+        .options(
+            selectinload(Analysis.asset),
+            selectinload(Analysis.articles),
+            selectinload(Analysis.market_quotes),
+        )
     )
     if analysis is None:
         raise HTTPException(status_code=404, detail="Analysis not found.")
@@ -118,9 +155,7 @@ def _get_analysis(db: Session, analysis_id: str) -> Analysis:
 
 
 def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
-    completed_at = analysis.completed_at
-    if completed_at is not None and completed_at.tzinfo is None:
-        completed_at = completed_at.replace(tzinfo=timezone.utc)
+    market_quote = max(analysis.market_quotes, key=lambda quote: quote.retrieved_at, default=None)
 
     return AnalysisResponse(
         id=analysis.id,
@@ -143,4 +178,35 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
             }
             for article in analysis.articles
         ],
+        market_quote=(
+            {
+                "id": market_quote.id,
+                "provider": market_quote.provider,
+                "price": _decimal_to_str(market_quote.price),
+                "previous_close": _decimal_to_str(market_quote.previous_close),
+                "open": _decimal_to_str(market_quote.open),
+                "day_high": _decimal_to_str(market_quote.day_high),
+                "day_low": _decimal_to_str(market_quote.day_low),
+                "volume": market_quote.volume,
+                "market_cap": market_quote.market_cap,
+                "quote_time": _datetime_to_str(market_quote.quote_time),
+                "retrieved_at": _datetime_to_str(market_quote.retrieved_at) or "",
+            }
+            if market_quote is not None
+            else None
+        ),
     )
+
+
+def _decimal_to_str(value: object | None) -> str | None:
+    if value is None:
+        return None
+    return str(value)
+
+
+def _datetime_to_str(value: object | None) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)

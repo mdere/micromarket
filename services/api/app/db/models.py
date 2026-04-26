@@ -42,6 +42,7 @@ class MarketQuote(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     asset_id: Mapped[str] = mapped_column(ForeignKey("assets.id"), index=True)
+    analysis_id: Mapped[str | None] = mapped_column(ForeignKey("analyses.id"), index=True)
     provider: Mapped[str] = mapped_column(String(64))
     price: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
     previous_close: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
@@ -59,6 +60,8 @@ class MarketQuote(Base):
     quote_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     raw_payload_artifact_path: Mapped[str | None] = mapped_column(Text)
+
+    analysis: Mapped["Analysis | None"] = relationship(back_populates="market_quotes")
 
 
 class Analysis(Base):
@@ -79,6 +82,7 @@ class Analysis(Base):
     articles: Mapped[list["Article"]] = relationship(
         secondary="analysis_articles", viewonly=True, back_populates="analyses"
     )
+    market_quotes: Mapped[list[MarketQuote]] = relationship(back_populates="analysis")
     sentiment_runs: Mapped[list["SentimentRun"]] = relationship(back_populates="analysis")
     sentiment_aggregate: Mapped["SentimentAggregate | None"] = relationship(
         back_populates="analysis", uselist=False

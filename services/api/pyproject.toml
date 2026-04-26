@@ -28,6 +28,12 @@ dev = [
   "pytest>=8.3",
   "ruff>=0.6",
 ]
+notebooks = [
+  "ipykernel>=6.29",
+  "jupyterlab>=4.2",
+  "matplotlib>=3.9",
+  "pandas>=2.2",
+]
 
 [tool.ruff]
 line-length = 100
