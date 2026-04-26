@@ -1,0 +1,230 @@
+:root {
+  color-scheme: light;
+  --background: #f6f7f9;
+  --surface: #ffffff;
+  --surface-muted: #eef1f4;
+  --text: #18202a;
+  --muted: #687381;
+  --border: #d8dee6;
+  --positive: #127a4a;
+  --negative: #b42318;
+  --warning: #a15c07;
+  --focus: #2457c5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 28px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand strong {
+  font-size: 20px;
+}
+
+.brand span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ticker-form {
+  display: flex;
+  gap: 8px;
+  min-width: min(460px, 100%);
+}
+
+.ticker-form input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  text-transform: uppercase;
+}
+
+.ticker-form button,
+.secondary-button {
+  border: 1px solid var(--text);
+  border-radius: 6px;
+  padding: 10px 14px;
+  background: var(--text);
+  color: white;
+  cursor: pointer;
+}
+
+.secondary-button {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 340px;
+  gap: 16px;
+  padding: 18px 28px 28px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.card h2,
+.card h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric {
+  padding: 10px;
+  border-radius: 6px;
+  background: var(--surface-muted);
+}
+
+.metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.metric strong {
+  display: block;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-value {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 8px 0 14px;
+}
+
+.forecast-value strong {
+  font-size: 34px;
+  letter-spacing: 0;
+}
+
+.forecast-value span {
+  color: var(--muted);
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 5px 9px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pill.positive {
+  color: var(--positive);
+  border-color: rgba(18, 122, 74, 0.35);
+  background: rgba(18, 122, 74, 0.08);
+}
+
+.pill.warning {
+  color: var(--warning);
+  border-color: rgba(161, 92, 7, 0.35);
+  background: rgba(161, 92, 7, 0.08);
+}
+
+.evidence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.evidence-item {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.evidence-item strong {
+  display: block;
+  font-size: 13px;
+}
+
+.evidence-item span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.disclaimer {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1020px) {
+  .topbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+}

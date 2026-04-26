@@ -23,6 +23,52 @@ The initial product-management package follows the workflow in `ai_tools/AI-Prod
 13. [Implementation Roadmap](docs/12-implementation-roadmap.md)
 14. [Session Summary / Handoff](docs/summary/current-state.md)
 
+## Project Structure
+
+```text
+apps/web        Next.js SSR dashboard shell
+services/api    FastAPI backend scaffold
+infra           Docker Compose and environment examples
+data            Local raw, processed, artifact, and report storage
+docs            Product, architecture, and roadmap documents
+```
+
+## Local Development
+
+Review the default local environment values:
+
+```bash
+cat infra/env.example
+```
+
+Start PostgreSQL, API, and web with Docker Compose:
+
+```bash
+docker compose -f infra/docker-compose.yml up --build
+```
+
+Or run services manually:
+
+```bash
+cd services/api
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+uvicorn app.main:app --reload
+```
+
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+Health check:
+
+```bash
+curl http://localhost:8000/health
+```
+
 ## Assumptions
 
 - First version is a web application.

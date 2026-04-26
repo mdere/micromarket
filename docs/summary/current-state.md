@@ -28,7 +28,10 @@ The product is research-only decision support. It should not issue direct buy/se
 
 - Product-management docs are approved as the current planning baseline.
 - Architecture recommendation is approved.
-- Next implementation phase is scaffolding the actual project structure.
+- Project scaffolding has started.
+- Current scaffold includes Next.js web app shell, FastAPI API skeleton, Docker Compose, environment example, and local data directories.
+- npm registry has been reset to the public npm registry for local installs.
+- Frontend dependencies were installed locally, producing `apps/web/package-lock.json`.
 
 ## Decisions From Questionnaire
 
@@ -59,7 +62,7 @@ The product is research-only decision support. It should not issue direct buy/se
   3. APIs later.
 - Free/open sources only for now.
 - Paid APIs should be optional plugins that can be enabled temporarily.
-- Market data provider is undecided.
+- Recommended MVP market data provider is `yfinance` behind a replaceable provider interface.
 - Real-time data is not needed for MVP.
 - Manual refresh or delayed data is acceptable for research use.
 
@@ -151,13 +154,14 @@ The architecture recommendation has been accepted:
 - Optional S3-compatible archive later.
 - Go deferred until a specific service boundary needs it.
 
-The next work is implementation planning or scaffolding. Recommended options:
+The next work is implementing the first backend vertical slice:
 
-1. Create the actual project skeleton under `micromarket/apps`, `micromarket/services`, `micromarket/infra`, and `micromarket/data`.
-2. Create initial FastAPI backend with health endpoint and database config.
-3. Create initial Next.js app shell.
-4. Add Docker Compose for PostgreSQL.
-5. Implement the first vertical slice from `12-implementation-roadmap.md`.
+1. Install backend Python dependencies in `services/api`.
+2. Add SQLAlchemy models and Alembic migrations for the MVP tables.
+3. Implement manual article text ingestion.
+4. Persist analysis and article records in PostgreSQL.
+5. Add market data provider interface implementation with `yfinance`.
+6. Implement baseline sentiment and forecast services.
 
 ## Suggested Recommendation To Explore Next
 
@@ -183,4 +187,8 @@ When resuming:
 2. Read `07-product-decisions-questionnaire.md`.
 3. Read `08-architecture-options.md`.
 4. Read `09-technical-architecture.md`, `10-data-model.md`, `11-model-evaluation-plan.md`, and `12-implementation-roadmap.md`.
-5. Continue with project scaffolding or implementation planning.
+5. Inspect `apps/web`, `services/api`, `infra`, and `data`.
+6. Run or install dependencies as needed:
+   - `cd apps/web && npm install`
+   - `cd services/api && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"`
+7. Continue with the backend vertical slice: database models, migrations, manual text ingestion, and persisted analyses.

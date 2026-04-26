@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: micromarket-db
+    environment:
+      POSTGRES_DB: micromarket
+      POSTGRES_USER: micromarket
+      POSTGRES_PASSWORD: micromarket
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U micromarket -d micromarket"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../services/api
+    container_name: micromarket-api
+    env_file:
+      - ./env.example
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../apps/web
+    container_name: micromarket-web
+    environment:
+      MICROMARKET_API_BASE_URL: http://api:8000
+      NEXT_PUBLIC_APP_NAME: micromarket
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
