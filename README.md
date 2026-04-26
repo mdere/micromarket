@@ -15,6 +15,13 @@ The initial product-management package follows the workflow in `ai_tools/AI-Prod
 5. [MVP Development Plan](docs/04-mvp-development-plan.md)
 6. [MVP Test Plan](docs/05-test-plan.md)
 7. [v0 Visual Generation Prompt](docs/06-v0-visual-prompt.md)
+8. [Product Decisions Questionnaire](docs/07-product-decisions-questionnaire.md)
+9. [Architecture Options](docs/08-architecture-options.md)
+10. [Technical Architecture](docs/09-technical-architecture.md)
+11. [Data Model](docs/10-data-model.md)
+12. [Model Evaluation Plan](docs/11-model-evaluation-plan.md)
+13. [Implementation Roadmap](docs/12-implementation-roadmap.md)
+14. [Session Summary / Handoff](docs/summary/current-state.md)
 
 ## Assumptions
 
