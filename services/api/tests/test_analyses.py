@@ -86,6 +86,16 @@ def test_create_and_get_analysis(tmp_path) -> None:
         assert created["sentiment_aggregate"]["article_count"] == 1
         assert created["sentiment_aggregate"]["positive_count"] == 1
         assert created["sentiment_aggregate"]["aggregate_score"] == "1.00000"
+        assert len(created["forecast_runs"]) == 3
+        primary_forecast = next(
+            run for run in created["forecast_runs"] if run["horizon"] == "3_trading_days"
+        )
+        assert primary_forecast["provider"] == "baseline"
+        assert primary_forecast["model_name"] == "forecast-rule-baseline"
+        assert primary_forecast["predicted_direction"] == "up"
+        assert primary_forecast["baseline_direction"] == "flat"
+        assert primary_forecast["feature_snapshot"]["included_article_count"] == 1
+        assert "Research-only forecast" in primary_forecast["limitations"][0]
         assert created["articles"][0]["word_count"] == 10
         artifact_path = created["articles"][0]["raw_artifact_path"]
         assert artifact_path is not None
@@ -99,6 +109,7 @@ def test_create_and_get_analysis(tmp_path) -> None:
         assert fetched.json()["sentiment_aggregate"]["summary"].startswith(
             "Baseline sentiment is positive"
         )
+        assert len(fetched.json()["forecast_runs"]) == 3
         assert fetched.json()["articles"][0]["content_hash"] == created["articles"][0]["content_hash"]
     finally:
         app.dependency_overrides.clear()

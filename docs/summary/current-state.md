@@ -57,6 +57,12 @@ The product is research-only decision support. It should not issue direct buy/se
   - `app/sentiment/baseline.py` implements a deterministic lexicon-based sentiment provider.
   - `POST /analyses` scores each persisted manual article, writes `sentiment_runs`, creates one `sentiment_aggregate`, and returns sentiment metadata.
   - Tests cover positive, negative, and neutral baseline sentiment behavior.
+- Baseline forecast slice is implemented:
+  - `app/forecasting/baseline.py` implements a deterministic rule-based forecast provider.
+  - `POST /analyses` now creates forecast runs for `next_close`, `3_trading_days`, and `7_trading_days`.
+  - Forecast records store provider/model versions, feature snapshots, top factors, limitations, no-change baseline fields, and target start/end metadata.
+  - API responses now include stored forecast metadata.
+  - Focused tests cover forecast generation and persisted analysis forecast responses.
 
 ## Decisions From Questionnaire
 
@@ -188,8 +194,9 @@ The current work is implementing the first backend vertical slice:
 5. Market data provider implementation with `yfinance` is in place.
 6. Market quote records are persisted and wired into `POST /analyses`.
 7. Baseline sentiment provider and persistence are in place.
-8. Next: implement baseline forecast service and persisted forecast records.
-9. Then broaden persisted create/read tests as forecast records land.
+8. Baseline forecast provider and persisted forecast records are in place.
+9. Next: implement the evaluation refresh path for expired forecasts and stored outcomes.
+10. Then broaden URL ingestion after the evaluation loop is stable.
 
 ## Suggested Recommendation To Explore Next
 
@@ -213,15 +220,20 @@ Reason: the project's highest-risk work is data/model quality, not API throughpu
 When resuming:
 
 1. Read this file.
-2. Read `07-product-decisions-questionnaire.md`.
-3. Read `08-architecture-options.md`.
-4. Read `09-technical-architecture.md`, `10-data-model.md`, `11-model-evaluation-plan.md`, and `12-implementation-roadmap.md`.
-5. Inspect `apps/web`, `services/api`, `infra`, and `data`.
-6. Run or install dependencies as needed:
+2. Read `docs/summary/operating-guide.md` for the north star, guardrails, commit discipline, and session-start protocol.
+3. Check and compare recent commits with the summary:
+   - `git status --short`
+   - `git log --oneline -n 8`
+   - `git show --stat --summary HEAD`
+4. Read `07-product-decisions-questionnaire.md`.
+5. Read `08-architecture-options.md`.
+6. Read `09-technical-architecture.md`, `10-data-model.md`, `11-model-evaluation-plan.md`, and `12-implementation-roadmap.md`.
+7. Inspect `apps/web`, `services/api`, `infra`, and `data`.
+8. Run or install dependencies as needed:
    - `cd apps/web && npm install`
    - backend venv should already exist at `services/api/.venv`; if rebuilding: `cd services/api && python3 -m venv .venv && source .venv/bin/activate && python -m pip install -e ".[dev]"`
-7. Verify backend tests with `cd services/api && source .venv/bin/activate && python -m pytest`.
-8. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
-9. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
-10. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
-11. Continue with the backend vertical slice: baseline forecasts and persisted forecast records.
+9. Verify backend tests with `cd services/api && source .venv/bin/activate && python -m pytest`.
+10. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
+11. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
+12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
+13. Continue with the backend vertical slice: evaluation refresh for expired forecasts and persisted outcomes.

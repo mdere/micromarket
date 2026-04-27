@@ -66,7 +66,9 @@ The response should include:
 - persisted article metadata,
 - a `market_quote` snapshot from `yfinance`,
 - one baseline `sentiment_runs` record,
-- one `sentiment_aggregate` summary.
+- one `sentiment_aggregate` summary,
+- three baseline `forecast_runs` records for next close, 3 trading days, and
+  7 trading days.
 
 If `POST /analyses` returns a provider error, confirm your network can reach
 Yahoo Finance through `yfinance`. Unit tests use a fake provider and do not need
@@ -160,9 +162,10 @@ Current API endpoints:
 The analysis route now persists manual text submissions, stores article text
 artifacts, fetches a `yfinance` market quote through the provider interface,
 persists the quote snapshot, scores article sentiment with the baseline
-provider, persists sentiment runs and an aggregate, and returns stored
-analysis/article/quote/sentiment metadata. Forecasting, URL extraction, and
-evaluation routes are still scaffold-level or provider-interface work.
+provider, persists sentiment runs and an aggregate, creates baseline forecast
+runs, and returns stored analysis/article/quote/sentiment/forecast metadata.
+URL extraction and evaluation routes are still scaffold-level or
+provider-interface work.
 
 Run database migrations from `services/api`:
 
@@ -196,9 +199,10 @@ python -m ruff check app tests
   `app/forecasting`.
 - The initial market-data implementation is `app/market_data/yfinance_provider.py`.
 - The initial sentiment implementation is `app/sentiment/baseline.py`.
+- The initial forecast implementation is `app/forecasting/baseline.py`.
 
-The next backend milestone is adding a baseline forecast service that consumes
-persisted articles, sentiment aggregates, and market quote snapshots.
+The next backend milestone is adding an evaluation refresh path that can compare
+expired forecast runs against actual outcomes and naive baselines.
 
 ## Market Data Provider
 
@@ -298,6 +302,28 @@ This baseline is not intended to be the final model. It gives the project a
 repeatable measurement floor before introducing FinBERT, LLM-assisted sentiment,
 or a custom model. Future providers should continue to satisfy the local
 `SentimentProvider` protocol and store model/provider versions with every run.
+
+## Forecast Provider
+
+The MVP forecast provider is `BaselineForecastProvider` in
+`app/forecasting/baseline.py`.
+
+It consumes normalized quote fields and the persisted sentiment aggregate, then
+creates forecast records for:
+
+- `next_close`
+- `3_trading_days`
+- `7_trading_days`
+
+Each `forecast_runs` record stores the provider, model name/version, predicted
+direction, predicted percent change, confidence score, no-change baseline,
+feature snapshot, top factors, limitations, target start price/time, and target
+end time. Direction language is deliberately non-advisory: `up`, `down`, or
+`uncertain`; no buy/sell/hold instruction is produced.
+
+This baseline is intentionally simple and has not been evaluated yet. It exists
+to preserve lineage and provide a repeatable measurement floor for the upcoming
+evaluation loop.
 
 ## Troubleshooting
 

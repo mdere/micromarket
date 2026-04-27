@@ -8,6 +8,7 @@ This project is not financial advice software and should not make autonomous buy
 
 The initial product-management package follows the workflow in `ai_tools/AI-Product-Development-Toolkit`:
 
+0. [Start Here / AI Handoff Prompt](START_HERE.md)
 1. [Product Journey](docs/00-product-journey.md)
 2. [Product Requirements Document](docs/01-prd.md)
 3. [UX and User Flow Specification](docs/02-ux-user-flow.md)
@@ -22,6 +23,7 @@ The initial product-management package follows the workflow in `ai_tools/AI-Prod
 12. [Model Evaluation Plan](docs/11-model-evaluation-plan.md)
 13. [Implementation Roadmap](docs/12-implementation-roadmap.md)
 14. [Session Summary / Handoff](docs/summary/current-state.md)
+15. [Operating Guide / Guardrails](docs/summary/operating-guide.md)
 
 ## Project Structure
 

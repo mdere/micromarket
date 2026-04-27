@@ -10,12 +10,15 @@ from app.db.models import (
     AnalysisArticle,
     Article,
     Asset,
+    ForecastRun,
     MarketQuote,
     SentimentAggregate,
     SentimentRun,
     utc_now,
 )
 from app.db.session import get_db
+from app.forecasting.dependencies import get_forecast_provider
+from app.forecasting.provider import ForecastInput, ForecastProvider
 from app.ingestion.service import ArticleIngestionService
 from app.market_data.dependencies import get_market_data_provider
 from app.market_data.provider import MarketDataProvider
@@ -35,6 +38,7 @@ def create_analysis(
     settings: Settings = Depends(get_settings),
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
     sentiment_provider: SentimentProvider = Depends(get_sentiment_provider),
+    forecast_provider: ForecastProvider = Depends(get_forecast_provider),
 ) -> AnalysisResponse:
     ticker = payload.ticker.upper().strip()
     manual_articles = [article for article in payload.articles if article.text and article.text.strip()]
@@ -73,27 +77,26 @@ def create_analysis(
         db.commit()
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    db.add(
-        MarketQuote(
-            asset_id=asset.id,
-            analysis_id=analysis.id,
-            provider=quote.provider,
-            price=quote.price,
-            previous_close=quote.previous_close,
-            open=quote.open,
-            day_high=quote.day_high,
-            day_low=quote.day_low,
-            volume=quote.volume,
-            market_cap=quote.market_cap,
-            fifty_two_week_high=quote.fifty_two_week_high,
-            fifty_two_week_low=quote.fifty_two_week_low,
-            moving_average_50=quote.moving_average_50,
-            moving_average_200=quote.moving_average_200,
-            beta=quote.beta,
-            pe_ratio=quote.pe_ratio,
-            quote_time=quote.quote_time,
-        )
+    market_quote = MarketQuote(
+        asset_id=asset.id,
+        analysis_id=analysis.id,
+        provider=quote.provider,
+        price=quote.price,
+        previous_close=quote.previous_close,
+        open=quote.open,
+        day_high=quote.day_high,
+        day_low=quote.day_low,
+        volume=quote.volume,
+        market_cap=quote.market_cap,
+        fifty_two_week_high=quote.fifty_two_week_high,
+        fifty_two_week_low=quote.fifty_two_week_low,
+        moving_average_50=quote.moving_average_50,
+        moving_average_200=quote.moving_average_200,
+        beta=quote.beta,
+        pe_ratio=quote.pe_ratio,
+        quote_time=quote.quote_time,
     )
+    db.add(market_quote)
 
     ingestion = ArticleIngestionService()
     artifacts = ArtifactStore(settings.artifact_root)
@@ -150,14 +153,49 @@ def create_analysis(
             )
         )
 
-    db.add(
-        _build_sentiment_aggregate(
-            analysis_id=analysis.id,
-            labels=sentiment_labels,
-            scores=sentiment_scores,
-            included_article_count=included_article_count,
-        )
+    sentiment_aggregate = _build_sentiment_aggregate(
+        analysis_id=analysis.id,
+        labels=sentiment_labels,
+        scores=sentiment_scores,
+        included_article_count=included_article_count,
     )
+    db.add(sentiment_aggregate)
+
+    for forecast in forecast_provider.generate_forecasts(
+        ForecastInput(
+            ticker=ticker,
+            quote_provider=market_quote.provider,
+            current_price=market_quote.price,
+            previous_close=market_quote.previous_close,
+            quote_time=market_quote.quote_time,
+            sentiment_score=sentiment_aggregate.aggregate_score,
+            agreement_score=sentiment_aggregate.agreement_score,
+            evidence_strength_score=sentiment_aggregate.evidence_strength_score,
+            article_count=sentiment_aggregate.article_count,
+            included_article_count=sentiment_aggregate.included_article_count,
+        )
+    ):
+        db.add(
+            ForecastRun(
+                analysis_id=analysis.id,
+                asset_id=asset.id,
+                horizon=forecast.horizon,
+                provider=forecast.provider,
+                model_name=forecast.model_name,
+                model_version=forecast.model_version,
+                predicted_direction=forecast.predicted_direction,
+                predicted_percent_change=_float_to_decimal(forecast.predicted_percent_change),
+                confidence_score=Decimal(str(forecast.confidence)),
+                baseline_direction=forecast.baseline_direction,
+                baseline_percent_change=_float_to_decimal(forecast.baseline_percent_change),
+                feature_snapshot=forecast.feature_snapshot,
+                top_factors=forecast.top_factors,
+                limitations=forecast.limitations,
+                target_start_price=forecast.target_start_price,
+                target_start_time=forecast.target_start_time,
+                target_end_time=forecast.target_end_time,
+            )
+        )
 
     analysis.status = "completed"
     analysis.completed_at = utc_now()
@@ -181,6 +219,7 @@ def list_analyses(db: Session = Depends(get_db)) -> list[AnalysisResponse]:
         .options(selectinload(Analysis.market_quotes))
         .options(selectinload(Analysis.sentiment_runs))
         .options(selectinload(Analysis.sentiment_aggregate))
+        .options(selectinload(Analysis.forecast_runs))
         .order_by(Analysis.created_at.desc())
         .limit(25)
     ).all()
@@ -197,6 +236,7 @@ def _get_analysis(db: Session, analysis_id: str) -> Analysis:
             selectinload(Analysis.market_quotes),
             selectinload(Analysis.sentiment_runs),
             selectinload(Analysis.sentiment_aggregate),
+            selectinload(Analysis.forecast_runs),
         )
     )
     if analysis is None:
@@ -279,6 +319,27 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
             if analysis.sentiment_aggregate is not None
             else None
         ),
+        forecast_runs=[
+            {
+                "id": run.id,
+                "horizon": run.horizon,
+                "provider": run.provider,
+                "model_name": run.model_name,
+                "model_version": run.model_version,
+                "predicted_direction": run.predicted_direction,
+                "predicted_percent_change": _decimal_to_str(run.predicted_percent_change),
+                "confidence_score": _decimal_to_str(run.confidence_score) or "0",
+                "baseline_direction": run.baseline_direction,
+                "baseline_percent_change": _decimal_to_str(run.baseline_percent_change),
+                "feature_snapshot": run.feature_snapshot or {},
+                "top_factors": run.top_factors or [],
+                "limitations": run.limitations or [],
+                "target_start_price": _decimal_to_str(run.target_start_price),
+                "target_start_time": _datetime_to_str(run.target_start_time),
+                "target_end_time": _datetime_to_str(run.target_end_time),
+            }
+            for run in sorted(analysis.forecast_runs, key=lambda item: item.horizon)
+        ],
     )
 
 
@@ -294,6 +355,12 @@ def _datetime_to_str(value: object | None) -> str | None:
     if hasattr(value, "isoformat"):
         return value.isoformat()
     return str(value)
+
+
+def _float_to_decimal(value: float | None) -> Decimal | None:
+    if value is None:
+        return None
+    return Decimal(str(value))
 
 
 def _build_sentiment_aggregate(

@@ -66,6 +66,25 @@ class SentimentAggregateResponse(BaseModel):
     summary: str | None
 
 
+class ForecastRunResponse(BaseModel):
+    id: str
+    horizon: str
+    provider: str
+    model_name: str
+    model_version: str
+    predicted_direction: str
+    predicted_percent_change: str | None
+    confidence_score: str
+    baseline_direction: str | None
+    baseline_percent_change: str | None
+    feature_snapshot: dict = Field(default_factory=dict)
+    top_factors: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    target_start_price: str | None
+    target_start_time: str | None
+    target_end_time: str | None
+
+
 class AnalysisResponse(BaseModel):
     id: str
     ticker: str
@@ -78,3 +97,4 @@ class AnalysisResponse(BaseModel):
     market_quote: MarketQuoteResponse | None = None
     sentiment_runs: list[SentimentRunResponse] = Field(default_factory=list)
     sentiment_aggregate: SentimentAggregateResponse | None = None
+    forecast_runs: list[ForecastRunResponse] = Field(default_factory=list)
