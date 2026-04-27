@@ -52,6 +52,7 @@ The product is research-only decision support. It should not issue direct buy/se
   - `app/market_data/yfinance_provider.py` implements a `yfinance` quote provider behind the provider protocol.
   - `POST /analyses` fetches a quote through dependency injection, persists it in `market_quotes`, and returns quote metadata in the response.
   - `market_quotes.analysis_id` has been added through Alembic revision `20260426_0002` so quote snapshots are tied to the analysis that used them.
+  - `market_quotes.volume` and `market_quotes.market_cap` use 64-bit integers after Alembic revision `20260427_0003` so live provider values do not overflow PostgreSQL `INTEGER`.
   - API tests use a fake market-data provider so unit tests stay offline and deterministic.
 - Baseline sentiment slice has started:
   - `app/sentiment/baseline.py` implements a deterministic lexicon-based sentiment provider.

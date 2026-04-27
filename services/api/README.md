@@ -264,6 +264,9 @@ inside `app/market_data/yfinance_provider.py`. Downstream analysis, sentiment,
 forecasting, and evaluation code should consume only local dataclasses and
 database models.
 
+`volume` and `market_cap` are stored as 64-bit integers because live market data
+can exceed PostgreSQL's 32-bit integer range.
+
 ### yfinance Caveats
 
 `yfinance` is a good local-first MVP provider, but it is not treated as a

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -49,8 +49,8 @@ class MarketQuote(Base):
     open: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
     day_high: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
     day_low: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
-    volume: Mapped[int | None] = mapped_column(Integer)
-    market_cap: Mapped[int | None] = mapped_column(Integer)
+    volume: Mapped[int | None] = mapped_column(BigInteger)
+    market_cap: Mapped[int | None] = mapped_column(BigInteger)
     fifty_two_week_high: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
     fifty_two_week_low: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
     moving_average_50: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
