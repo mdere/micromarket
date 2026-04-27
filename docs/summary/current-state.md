@@ -63,6 +63,11 @@ The product is research-only decision support. It should not issue direct buy/se
   - Forecast records store provider/model versions, feature snapshots, top factors, limitations, no-change baseline fields, and target start/end metadata.
   - API responses now include stored forecast metadata.
   - Focused tests cover forecast generation and persisted analysis forecast responses.
+- Evaluation refresh slice is implemented:
+  - `POST /evaluations/refresh` finds expired forecast runs without outcomes and persists `forecast_outcomes`.
+  - `GET /evaluations/summary` returns total evaluated forecasts plus per-horizon accuracy/error summaries.
+  - The market-data provider interface now includes historical close lookup for evaluation.
+  - Tests use a fake market-data provider so evaluation remains offline and deterministic.
 
 ## Decisions From Questionnaire
 
@@ -195,8 +200,8 @@ The current work is implementing the first backend vertical slice:
 6. Market quote records are persisted and wired into `POST /analyses`.
 7. Baseline sentiment provider and persistence are in place.
 8. Baseline forecast provider and persisted forecast records are in place.
-9. Next: implement the evaluation refresh path for expired forecasts and stored outcomes.
-10. Then broaden URL ingestion after the evaluation loop is stable.
+9. Evaluation refresh for expired forecasts and stored outcomes is in place.
+10. Next: broaden URL ingestion over the stable analysis/evaluation backbone.
 
 ## Suggested Recommendation To Explore Next
 
@@ -236,4 +241,4 @@ When resuming:
 10. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
 11. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
-13. Continue with the backend vertical slice: evaluation refresh for expired forecasts and persisted outcomes.
+13. Continue with the backend vertical slice: URL ingestion over the stable analysis/evaluation backbone.

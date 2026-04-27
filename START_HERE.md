@@ -72,6 +72,7 @@ As of the latest handoff, the backend vertical slice has:
 - notebook research workspace,
 - `yfinance` market quote provider and quote persistence,
 - baseline sentiment provider and sentiment persistence,
-- baseline forecast provider and forecast persistence.
+- baseline forecast provider and forecast persistence,
+- evaluation refresh and summary over persisted forecast outcomes.
 
-The next major backend step is evaluation refresh for expired forecasts and persisted outcomes.
+The next major backend step is URL ingestion over the stable analysis/evaluation backbone.

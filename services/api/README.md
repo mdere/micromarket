@@ -164,8 +164,8 @@ artifacts, fetches a `yfinance` market quote through the provider interface,
 persists the quote snapshot, scores article sentiment with the baseline
 provider, persists sentiment runs and an aggregate, creates baseline forecast
 runs, and returns stored analysis/article/quote/sentiment/forecast metadata.
-URL extraction and evaluation routes are still scaffold-level or
-provider-interface work.
+Evaluation refresh can now persist outcomes for expired forecast runs. URL
+extraction is still scaffold-level work.
 
 Run database migrations from `services/api`:
 
@@ -201,8 +201,8 @@ python -m ruff check app tests
 - The initial sentiment implementation is `app/sentiment/baseline.py`.
 - The initial forecast implementation is `app/forecasting/baseline.py`.
 
-The next backend milestone is adding an evaluation refresh path that can compare
-expired forecast runs against actual outcomes and naive baselines.
+The next backend milestone is URL ingestion over the stable analysis and
+evaluation backbone.
 
 ## Market Data Provider
 
@@ -239,6 +239,7 @@ The implementation intentionally uses a small subset of `yfinance`:
 | `yf_ticker.fast_info` | `Ticker.fast_info` | Primary lightweight source for current quote fields when available. | <https://ranaroussi.github.io/yfinance/reference/api/yfinance.Ticker.fast_info.html> |
 | `yf_ticker.info` | `Ticker.info` | Fallback and supplemental metadata source for market cap, averages, beta, P/E, and profile-like fields. | <https://ranaroussi.github.io/yfinance/reference/api/yfinance.Ticker.info.html> |
 | `yf_ticker.history(period="5d", interval="1d", auto_adjust=False)` | `Ticker.history()` | Fallback source for latest OHLCV values and quote date when quote fields are missing. | <https://ranaroussi.github.io/yfinance/reference/api/yfinance.Ticker.history.html> |
+| `yf_ticker.history(start=..., end=..., interval="1d", auto_adjust=False)` | `Ticker.history()` | Historical close lookup for evaluating expired forecasts. | <https://ranaroussi.github.io/yfinance/reference/api/yfinance.Ticker.history.html> |
 
 The normalized fields currently persisted are:
 
@@ -321,9 +322,27 @@ feature snapshot, top factors, limitations, target start price/time, and target
 end time. Direction language is deliberately non-advisory: `up`, `down`, or
 `uncertain`; no buy/sell/hold instruction is produced.
 
-This baseline is intentionally simple and has not been evaluated yet. It exists
-to preserve lineage and provide a repeatable measurement floor for the upcoming
-evaluation loop.
+This baseline is intentionally simple and has not been validated at scale yet.
+It exists to preserve lineage and provide a repeatable measurement floor for
+the evaluation loop.
+
+## Evaluation Refresh
+
+`POST /evaluations/refresh` finds forecast runs whose target end time has passed
+and that do not yet have a `forecast_outcomes` row. For each eligible forecast,
+it asks the market-data provider for the first available daily close on or after
+the target date, then stores:
+
+- actual end price,
+- actual percent change,
+- actual direction,
+- directional correctness,
+- absolute error,
+- no-change baseline correctness and error.
+
+`GET /evaluations/summary` returns total evaluated forecasts and per-horizon
+summary metrics. Tests inject a fake market-data provider so evaluation stays
+offline and deterministic.
 
 ## Troubleshooting
 

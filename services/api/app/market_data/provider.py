@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Protocol
 
@@ -25,6 +25,17 @@ class MarketQuote:
     raw_payload: dict | None = None
 
 
+@dataclass(frozen=True)
+class MarketClose:
+    ticker: str
+    close_price: Decimal
+    close_date: date
+    provider: str = "unknown"
+
+
 class MarketDataProvider(Protocol):
     def get_quote(self, ticker: str) -> MarketQuote:
         """Return a market quote for a ticker."""
+
+    def get_close_on_or_after(self, ticker: str, target_date: date) -> MarketClose:
+        """Return the first available daily close on or after target_date."""

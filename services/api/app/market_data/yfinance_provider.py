@@ -1,10 +1,10 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
 import yfinance as yf
 
-from app.market_data.provider import MarketQuote
+from app.market_data.provider import MarketClose, MarketQuote
 
 
 class MarketDataProviderError(RuntimeError):
@@ -106,6 +106,37 @@ class YFinanceMarketDataProvider:
             beta=self._decimal(info.get("beta")),
             pe_ratio=self._decimal(info.get("trailingPE")),
             raw_payload={"fast_info": fast_info, "info": self._compact_info(info)},
+        )
+
+    def get_close_on_or_after(self, ticker: str, target_date: date) -> MarketClose:
+        symbol = ticker.upper().strip()
+        yf_ticker = yf.Ticker(symbol)
+        end_date = target_date + timedelta(days=10)
+        history = yf_ticker.history(
+            start=target_date.isoformat(),
+            end=end_date.isoformat(),
+            interval="1d",
+            auto_adjust=False,
+        )
+
+        if history.empty:
+            raise MarketDataProviderError(
+                f"No historical close returned for {symbol} on or after {target_date}."
+            )
+
+        for index, row in history.iterrows():
+            close_price = self._decimal(row.get("Close"))
+            close_date = self._to_datetime(index)
+            if close_price is not None and close_date is not None:
+                return MarketClose(
+                    ticker=symbol,
+                    close_price=close_price,
+                    close_date=close_date.date(),
+                    provider=self.provider_name,
+                )
+
+        raise MarketDataProviderError(
+            f"Historical data for {symbol} did not include a usable close price."
         )
 
     def _safe_info(self, yf_ticker: yf.Ticker) -> dict[str, Any]:
