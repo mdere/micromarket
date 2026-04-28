@@ -79,6 +79,11 @@ The product is research-only decision support. It should not issue direct buy/se
   - Duplicate content hashes and low-relevance articles are persisted but excluded from aggregate sentiment and forecast inputs.
   - Article responses include relevance, duplicate group, inclusion, and exclusion metadata.
   - URL extraction failures return clear `502` responses and mark analyses as failed.
+- Minimal UI slice is implemented in the working tree:
+  - `apps/web/app/page.tsx` now provides a usable analysis workflow over the API.
+  - Users can submit a ticker with manual article text, a URL, or both.
+  - The page renders primary forecast, sentiment aggregate, market quote, evidence metadata, limitations, and recent analyses.
+  - UI language remains research-only and avoids buy/sell/hold advice.
 
 ## Decisions From Questionnaire
 
@@ -214,7 +219,9 @@ The current work is implementing the first backend vertical slice:
 9. Evaluation refresh for expired forecasts and stored outcomes is in place.
 10. URL ingestion over the stable analysis/evaluation backbone is in place.
 11. Article relevance, duplicate handling, and extraction failure reporting are in place.
-12. Next: build a minimal UI over the stable API response.
+12. Minimal UI over the stable API response is in place in the working tree.
+13. Next: broaden validation with frontend checks and commit the completed UI slice.
+14. Then polish analysis UX, API error states, and evaluation summary visibility.
 
 ## Suggested Recommendation To Explore Next
 
@@ -254,4 +261,4 @@ When resuming:
 10. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
 11. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
-13. Continue with the backend vertical slice: minimal UI over the stable API response.
+13. Continue with UI polish, API error states, and evaluation summary visibility.

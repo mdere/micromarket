@@ -147,7 +147,8 @@ Continue the first backend vertical slice:
 7. Evaluation refresh and summary: done.
 8. URL ingestion: done.
 9. Article relevance, duplicate handling, and extraction failure reporting: done.
-10. Next: minimal UI over the stable API response.
+10. Minimal UI over the stable API response: done.
+11. Next: UI polish, API error states, and evaluation summary visibility.
 
 ## Escalation Triggers
 

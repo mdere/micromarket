@@ -75,6 +75,7 @@ As of the latest handoff, the backend vertical slice has:
 - baseline forecast provider and forecast persistence,
 - evaluation refresh and summary over persisted forecast outcomes,
 - URL article ingestion through a provider boundary,
-- article relevance, duplicate handling, and extraction failure reporting.
+- article relevance, duplicate handling, and extraction failure reporting,
+- minimal UI over the stable analysis API response.
 
-The next major backend step is a minimal UI over the stable API response.
+The next major step is UI polish, API error states, and evaluation summary visibility.
