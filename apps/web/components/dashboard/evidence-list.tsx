@@ -1,9 +1,15 @@
 import type { ArticleResponse } from "@/lib/micromarket-types";
 import { formatScore } from "@/lib/format";
 
-export function EvidenceList({ articles }: { articles: ArticleResponse[] }) {
+export function EvidenceList({
+  articles,
+  emptyMessage = "No evidence loaded."
+}: {
+  articles: ArticleResponse[];
+  emptyMessage?: string;
+}) {
   if (!articles.length) {
-    return <p className="muted-text">No evidence loaded.</p>;
+    return <p className="muted-text">{emptyMessage}</p>;
   }
 
   return (

@@ -80,6 +80,7 @@ As of the latest handoff, the backend vertical slice has:
 - ticker-centered analysis history in the UI/API,
 - API error states and evaluation summary visibility in the UI,
 - evaluation refresh controls and dashboard component structure,
-- panel-level loading states and failed-analysis detail.
+- panel-level loading states and failed-analysis detail,
+- selected-run evidence filtering and article-history reuse markers.
 
-The next major step is UI polish around evidence grouping/filtering and empty-state ergonomics.
+The next major step is UI polish around empty-state ergonomics and responsive density.

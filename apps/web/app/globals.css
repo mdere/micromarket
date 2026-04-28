@@ -218,6 +218,34 @@ button:disabled {
   gap: 8px;
 }
 
+.segmented-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.segmented-control button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 7px 9px;
+}
+
+.segmented-control button.active {
+  background: var(--surface-blue);
+  border-color: #b9cbd7;
+  color: var(--focus);
+}
+
+.segmented-control span {
+  color: var(--muted);
+  margin-left: 4px;
+}
+
 .timeline-row {
   align-items: center;
   background: var(--surface);
@@ -415,6 +443,10 @@ button:disabled {
   padding: 10px;
 }
 
+.evidence-row.reused {
+  background: #fbfcfc;
+}
+
 .evidence-row strong {
   display: block;
   font-size: 13px;
@@ -449,6 +481,10 @@ button:disabled {
   color: var(--muted);
   font-size: 12px;
   padding: 4px 7px;
+}
+
+.evidence-meta span.reused {
+  color: var(--focus);
 }
 
 .warning-text {

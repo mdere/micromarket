@@ -16,7 +16,10 @@ export function ArticleHistory({ articleHistory, selectedTicker }: ArticleHistor
       {articleHistory.length ? (
         <div className="evidence-list">
           {articleHistory.map(({ article, analyses }) => (
-            <article className="evidence-row" key={article.content_hash}>
+            <article
+              className={analyses.length > 1 ? "evidence-row reused" : "evidence-row"}
+              key={article.content_hash}
+            >
               <div>
                 <ArticleTitle article={article} />
                 <p>{article.source ?? article.input_type}</p>
@@ -26,6 +29,7 @@ export function ArticleHistory({ articleHistory, selectedTicker }: ArticleHistor
                 <span>
                   {analyses.length} run{analyses.length === 1 ? "" : "s"}
                 </span>
+                {analyses.length > 1 ? <span className="reused">reused</span> : null}
                 <span className={article.included_in_forecast ? "included" : "excluded"}>
                   {article.included_in_forecast ? "included" : "excluded"}
                 </span>

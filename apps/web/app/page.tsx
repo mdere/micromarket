@@ -6,7 +6,7 @@ import { ArticleHistory } from "@/components/dashboard/article-history";
 import { DashboardNotices } from "@/components/dashboard/notices";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { EvaluationMonitor } from "@/components/dashboard/evaluation-monitor";
-import { EvidenceList } from "@/components/dashboard/evidence-list";
+import { EvidencePanel } from "@/components/dashboard/evidence-panel";
 import { ForecastPanel } from "@/components/dashboard/forecast-panel";
 import { Metric } from "@/components/dashboard/metric";
 import { SentimentMarketGrid } from "@/components/dashboard/sentiment-market-grid";
@@ -326,13 +326,7 @@ export default function Home() {
             summary={evaluationSummary}
           />
 
-          <section className="panel">
-            <div className="section-heading">
-              <h2>Selected Run Evidence</h2>
-              <span>{activeAnalysis?.articles.length ?? 0} articles</span>
-            </div>
-            <EvidenceList articles={activeAnalysis?.articles ?? []} />
-          </section>
+          <EvidencePanel articles={activeAnalysis?.articles ?? []} />
 
           <ArticleHistory articleHistory={articleHistory} selectedTicker={selectedTicker} />
 

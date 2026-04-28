@@ -108,6 +108,10 @@ The product is research-only decision support. It should not issue direct buy/se
   - `AnalysisResponse` now exposes persisted `error_message` for failed analyses.
   - The dashboard shows loading states for ticker history, selected analysis fetches, and evaluation summary loads.
   - Failed analysis rows are visually distinct in the timeline, and failed-analysis notices include backend error details when available.
+- Evidence grouping/filtering slice is implemented in the working tree:
+  - Selected run evidence now has filter controls for all, included, excluded, and duplicate articles with counts.
+  - Evidence empty states are specific to the selected filter.
+  - Ticker article history visually marks reused articles across multiple runs.
 
 ## Decisions From Questionnaire
 
@@ -249,8 +253,9 @@ The current work is implementing the first backend vertical slice:
 13. Ticker-centered analysis history is implemented.
 14. UI error states, evaluation summary visibility, and evaluation refresh controls are implemented.
 15. Next.js dashboard component refactor is implemented.
-16. Panel-level loading states and clearer failed-analysis detail are implemented in the working tree.
-17. Next: validate and commit the loading/error-detail slice.
+16. Panel-level loading states and clearer failed-analysis detail are implemented.
+17. Evidence grouping/filtering and article-history reuse markers are implemented in the working tree.
+18. Next: validate and commit the evidence UI polish slice.
 
 ## Suggested Recommendation To Explore Next
 
@@ -293,6 +298,6 @@ When resuming:
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
 13. Validate and commit the ticker-centered history slice if it is still uncommitted.
 14. Validate and commit the UI refresh/refactor slice if it is still uncommitted.
-15. Validate and commit the loading/error-detail slice if it is still uncommitted.
-16. Continue with UI polish around evidence grouping/filtering and empty-state ergonomics.
+15. Validate and commit the evidence UI polish slice if it is still uncommitted.
+16. Continue with UI polish around empty-state ergonomics and responsive density.
 17. Keep the UI research-only and avoid buy/sell/hold language.

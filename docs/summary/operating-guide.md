@@ -154,8 +154,9 @@ Continue the first backend vertical slice:
 11. Ticker-centered analysis history in the UI/API: done.
 12. API error states and evaluation summary visibility: done.
 13. Evaluation refresh controls and dashboard component refactor: done.
-14. Panel-level loading states and clearer failed-analysis detail: in progress.
-15. Next: UI polish around evidence grouping/filtering and empty-state ergonomics.
+14. Panel-level loading states and clearer failed-analysis detail: done.
+15. Evidence grouping/filtering and article-history reuse markers: in progress.
+16. Next: UI polish around empty-state ergonomics and responsive density.
 
 ## Escalation Triggers
 

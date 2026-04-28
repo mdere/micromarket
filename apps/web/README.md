@@ -29,7 +29,9 @@ summary from `GET /evaluations/summary`. The evaluation monitor can trigger
 Dashboard rendering is split into components under `components/dashboard`.
 Shared API response types and formatting helpers live under `lib`. The
 dashboard includes panel-level loading states and shows backend failure details
-when failed analyses are available in ticker history.
+when failed analyses are available in ticker history. Selected-run evidence can
+be filtered by all, included, excluded, or duplicate articles, and ticker
+article history marks articles reused across multiple analyses.
 
 Ticker-centered history is the active UI shape. A selected ticker, such as AMD,
 shows prior AMD analysis runs and the articles/evidence used across those runs
