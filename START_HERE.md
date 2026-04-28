@@ -9,7 +9,8 @@ Before making changes, read these files in order:
 1. `docs/summary/current-state.md`
 2. `docs/summary/operating-guide.md`
 3. `docs/12-implementation-roadmap.md`
-4. Relevant source files for the task
+4. `docs/13-model-quality-plan.md` when working on sentiment/model quality
+5. Relevant source files for the task
 
 Then validate the repository state against recent commits:
 
@@ -33,6 +34,7 @@ Please start by reading:
 1. docs/summary/current-state.md
 2. docs/summary/operating-guide.md
 3. docs/12-implementation-roadmap.md
+4. docs/13-model-quality-plan.md when working on sentiment/model quality
 
 Then run or inspect:
 
@@ -82,5 +84,6 @@ As of the latest handoff, the backend vertical slice has:
 - evaluation refresh controls and dashboard component structure,
 - panel-level loading states and failed-analysis detail,
 - selected-run evidence filtering and article-history reuse markers.
+- model-quality planning for stronger sentiment baselines and optional local LLM providers.
 
-The next major step is UI polish around empty-state ergonomics and responsive density.
+The next major step is model-quality foundation work: implement analysis as-of time, historical market lookback alignment, and forecast target windows before expanding sentiment fixtures or optional Ollama-backed sentiment providers.

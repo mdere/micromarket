@@ -6,6 +6,38 @@ The MVP model should not only generate forecasts. It should make forecasts that 
 
 The evaluation goal is to learn whether article sentiment contributes useful signal beyond naive assumptions.
 
+The next model-quality goal is to improve sentiment first. Better sentiment labels, driver extraction, evidence snippets, and confidence calibration should be measured before adding more forecast complexity.
+
+See `docs/13-model-quality-plan.md` for the provider progression from deterministic baseline to optional Ollama/local LLM sentiment.
+
+## As-Of Time And Lookahead Bias
+
+Forecast evaluation must be anchored to the analysis `analysis_as_of` timestamp.
+
+For a live run, `analysis_as_of` is the current analysis time. For a historical article or training example, `analysis_as_of` should come from the article's `published_at` timestamp or an explicit historical timestamp.
+
+All model inputs must be available at or before `analysis_as_of`:
+
+- article evidence,
+- market quote and historical price features,
+- moving averages and momentum windows,
+- sentiment aggregates,
+- forecast baseline features.
+
+All outcomes must occur after `analysis_as_of`.
+
+Example:
+
+```text
+today: 2026-04-01
+article published_at: 2026-03-05
+analysis_as_of: 2026-03-05
+market lookback: prior 30 days ending on 2026-03-05
+3-trading-day target: starts on 2026-03-05 and ends after 3 trading days
+```
+
+This prevents lookahead bias. The model should not be rewarded for using price movement or articles that were not available at the simulated decision point.
+
 ## Initial Forecast Targets
 
 Store forecasts for:
@@ -31,6 +63,7 @@ Each forecast should include:
 - evidence article ids,
 - limitations,
 - start price,
+- feature window start and end,
 - target evaluation time.
 
 ## Baselines
@@ -116,6 +149,20 @@ Signals:
 - source diversity,
 - recency.
 
+### Sentiment Fixture Quality
+
+Measures whether a sentiment provider can classify curated article examples before downstream forecast evaluation is possible.
+
+Use for:
+
+- label agreement against hand-labeled examples,
+- score error against expected rough scores,
+- driver extraction coverage,
+- evidence snippet relevance,
+- confidence reasonableness.
+
+This is the first metric set for comparing the deterministic baseline against Ollama/local LLM output.
+
 ## MVP Success Thresholds
 
 Early MVP success should not require production-grade accuracy. It should require measurable learning.
@@ -136,12 +183,14 @@ Stronger MVP outcome:
 ## Evaluation Workflow
 
 1. User runs analysis.
-2. System stores forecast records for all horizons.
-3. System waits until target horizon passes.
-4. User or scheduled job runs evaluation refresh.
-5. System fetches actual end price.
-6. System creates `forecast_outcomes`.
-7. Evaluation summary updates aggregate metrics.
+2. System resolves `analysis_as_of`.
+3. System fetches market features ending at `analysis_as_of`.
+4. System stores forecast records for all horizons.
+5. System waits until target horizon passes.
+6. User or scheduled job runs evaluation refresh.
+7. System fetches actual end price.
+8. System creates `forecast_outcomes`.
+9. Evaluation summary updates aggregate metrics.
 
 ## Notebook-Assisted Evaluation
 
@@ -151,12 +200,15 @@ Use notebooks to:
 
 - inspect whether `yfinance` quote/history data is usable for selected equities and ETFs,
 - compare sentiment distributions across articles and tickers,
+- compare baseline, Ollama/local LLM, FinBERT, or other experimental sentiment providers against the same curated fixture set,
 - tune baseline forecast weights,
 - inspect confidence calibration by bucket,
 - compare the forecast model against no-change, momentum, and sentiment-only baselines,
 - create charts and tables for local evaluation reports.
 
 Notebook outputs should not be the system of record. Forecasts, outcomes, model versions, and provider metadata should remain in PostgreSQL. Reports or charts generated from notebooks can be stored under `data/reports`, while stable model logic should be promoted into tested backend modules.
+
+Hosted notebooks such as Google Colab or Databricks can be used for exploratory model experiments when local hardware is insufficient. Export only sanitized datasets, do not include secrets or personal financial context, and promote useful results back into this repository as code, fixtures, tests, model artifacts, or reports.
 
 ## Evaluation API
 
@@ -202,7 +254,9 @@ Every model change should increment a version string.
 Recommended format:
 
 ```text
-sentiment-baseline-v0.1
+sentiment-lexicon-v0.1
+sentiment-lexicon-v0.2
+sentiment-ollama-llama3.1-8b-v0.1
 forecast-rules-v0.1
 forecast-rules-v0.2
 ```

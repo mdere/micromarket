@@ -23,6 +23,7 @@ The product is research-only decision support. It should not issue direct buy/se
 - Data model: `micromarket/docs/10-data-model.md`
 - Model evaluation plan: `micromarket/docs/11-model-evaluation-plan.md`
 - Implementation roadmap: `micromarket/docs/12-implementation-roadmap.md`
+- Model quality plan: `micromarket/docs/13-model-quality-plan.md`
 
 ## Approval State
 
@@ -37,7 +38,7 @@ The product is research-only decision support. It should not issue direct buy/se
 - FastAPI/TestClient dependency stack is pinned for local stability: FastAPI `0.115.6`, Starlette `0.41.x`, Uvicorn `0.30.x`, AnyIO `3.7.x`, and HTTPX `0.27.x`.
 - `services/api/README.md` now contains comprehensive local setup, Docker Compose, verification, testing, and troubleshooting instructions.
 - Current backend setup commit: `71d6acc` (`Set up backend local dependencies`).
-- The first backend persistence slice is now implemented in the working tree:
+- The first backend persistence slice is implemented:
   - SQLAlchemy MVP models exist under `services/api/app/db/models.py`.
   - Alembic is configured under `services/api/alembic`.
   - `POST /analyses` persists manual text analyses, assets, articles, analysis/article joins, and raw text artifacts.
@@ -96,22 +97,32 @@ The product is research-only decision support. It should not issue direct buy/se
   - The web dashboard now loads a selected ticker workspace, renders a ticker-scoped analysis timeline, and shows selected-run evidence plus ticker-level article history.
   - Article titles link to source URLs when a URL is available.
   - Tests cover ticker-filtered analysis listing.
-- UI error/evaluation visibility slice is implemented in the working tree:
+- UI error/evaluation visibility slice is implemented:
   - The dashboard shows persistent notices for API load failures, failed analyses, and evidence excluded from sentiment/forecast inputs.
   - The dashboard reads `GET /evaluations/summary` and renders a model-monitoring panel with horizon-level evaluated forecast counts, directional accuracy, model mean error, and baseline mean error.
   - The evaluation monitor can trigger `POST /evaluations/refresh`, show evaluated/skipped counts and provider errors, and reload the summary afterward.
-- Next.js dashboard refactor is implemented in the working tree:
+- Next.js dashboard refactor is implemented:
   - `apps/web/app/page.tsx` now owns state and API orchestration.
   - Dashboard UI panels live under `apps/web/components/dashboard`.
   - Shared API response types and formatting helpers live under `apps/web/lib`.
-- Panel-level loading and failed-analysis detail slice is implemented in the working tree:
+- Panel-level loading and failed-analysis detail slice is implemented:
   - `AnalysisResponse` now exposes persisted `error_message` for failed analyses.
   - The dashboard shows loading states for ticker history, selected analysis fetches, and evaluation summary loads.
   - Failed analysis rows are visually distinct in the timeline, and failed-analysis notices include backend error details when available.
-- Evidence grouping/filtering slice is implemented in the working tree:
+- Evidence grouping/filtering slice is implemented:
   - Selected run evidence now has filter controls for all, included, excluded, and duplicate articles with counts.
   - Evidence empty states are specific to the selected filter.
   - Ticker article history visually marks reused articles across multiple runs.
+- Model-quality direction has been reevaluated:
+  - `docs/13-model-quality-plan.md` is the next planning source for sentiment/model work.
+  - Next major work should shift from UI mechanics to sentiment quality, model evaluation, and provider experimentation.
+  - Recommended path is to strengthen the deterministic sentiment baseline first, then add an optional Ollama-backed sentiment provider behind the existing provider interface.
+  - Google Colab and Databricks-style environments are acceptable for exploratory experiments only; production runtime should remain local-first.
+- Historical time-alignment decision added:
+  - Every analysis should resolve an `analysis_as_of` timestamp.
+  - Live runs can use current analysis time; historical replay and training runs should use article `published_at` or an explicit historical timestamp.
+  - Market feature lookbacks should end at `analysis_as_of`, forecast target windows should start at `analysis_as_of`, and outcomes should measure prices after the target horizon.
+  - This is required before trusting sentiment/model-quality evaluation because it prevents lookahead bias.
 
 ## Decisions From Questionnaire
 
@@ -214,10 +225,10 @@ The architecture should avoid overbuilding SaaS features but should not box the 
    - keep provider interface open for Alpha Vantage, Finnhub, Polygon, or another provider later.
 
 2. Sentiment provider:
-   - rule-based baseline,
-   - FinBERT/local transformer sentiment,
-   - OpenAI/LLM sentiment extraction,
-   - hybrid baseline plus LLM explanation.
+   - current provider is a rule-based baseline,
+   - next provider target is an optional Ollama/local LLM sentiment provider,
+   - FinBERT/local transformer and hosted notebook experiments remain research options,
+   - OpenAI or other APIs remain optional later providers, not default MVP runtime.
 
 3. URL extraction library:
    - choose maintained Python package during implementation.
@@ -254,8 +265,10 @@ The current work is implementing the first backend vertical slice:
 14. UI error states, evaluation summary visibility, and evaluation refresh controls are implemented.
 15. Next.js dashboard component refactor is implemented.
 16. Panel-level loading states and clearer failed-analysis detail are implemented.
-17. Evidence grouping/filtering and article-history reuse markers are implemented in the working tree.
-18. Next: validate and commit the evidence UI polish slice.
+17. Evidence grouping/filtering and article-history reuse markers are implemented.
+18. Model-quality plan is documented.
+19. Historical as-of-time alignment is documented as the next architecture correction.
+20. Next: commit the documentation updates, then implement as-of-time aligned historical replay before expanding sentiment provider complexity.
 
 ## Suggested Recommendation To Explore Next
 
@@ -272,6 +285,8 @@ The current recommended architecture is:
 - Also store next-close and 7-trading-day forecasts for later evaluation.
 - Start market data with `yfinance` behind a provider interface.
 - Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
+- Start model-quality work by fixing time alignment first: add `analysis_as_of`, historical market lookbacks, and forecast target windows that start from the simulated decision point.
+- After time alignment is in place, improve deterministic sentiment fixtures and confidence/driver extraction, then add an optional Ollama sentiment provider behind `SentimentProvider`.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -296,8 +311,8 @@ When resuming:
 10. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
 11. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
-13. Validate and commit the ticker-centered history slice if it is still uncommitted.
-14. Validate and commit the UI refresh/refactor slice if it is still uncommitted.
-15. Validate and commit the evidence UI polish slice if it is still uncommitted.
-16. Continue with UI polish around empty-state ergonomics and responsive density.
-17. Keep the UI research-only and avoid buy/sell/hold language.
+13. Read `docs/13-model-quality-plan.md`.
+14. Implement analysis `analysis_as_of` semantics and historical market lookback alignment.
+15. Add curated sentiment fixtures and improve the deterministic baseline provider.
+16. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
+17. Keep the UI and model outputs research-only and avoid buy/sell/hold language.

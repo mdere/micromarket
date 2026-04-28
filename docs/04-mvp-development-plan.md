@@ -35,8 +35,9 @@ Initial users are individual investors and AIML builders who can tolerate beta-q
 - Frontend: React or Next.js with TypeScript.
 - Styling: Tailwind CSS or existing project design stack.
 - Backend API: Python FastAPI for ingestion and model orchestration.
-- Data processing: pandas, scikit-learn, transformers or OpenAI-compatible LLM calls for sentiment if available.
-- Database: SQLite for local MVP, PostgreSQL when moving to hosted multi-user use.
+- Data processing: pandas, scikit-learn, deterministic baseline sentiment first, then optional local LLM or transformer providers when measurable.
+- Local LLM runtime: Ollama can be added later behind a provider interface for sentiment experiments, but it should not be required for default MVP operation.
+- Database: PostgreSQL for local structured MVP storage.
 - Market data: start with yfinance or another low-cost provider, then replace with production-grade provider later.
 - Article data: RSS/news API/user URL ingestion for MVP.
 - Jobs: simple synchronous pipeline first; move to background jobs after MVP.
@@ -59,7 +60,9 @@ Initial users are individual investors and AIML builders who can tolerate beta-q
 ### Phase 3: Sentiment and Forecasting
 
 - Add article relevance score.
-- Add sentiment classifier.
+- Add analysis as-of time so historical articles are evaluated against market data available at the article date.
+- Add curated sentiment fixtures and improve the baseline sentiment classifier.
+- Add optional Ollama/local LLM sentiment provider only after the baseline has measurable fixtures.
 - Aggregate ticker sentiment.
 - Add baseline forecast model.
 - Store confidence, horizon, and model version.

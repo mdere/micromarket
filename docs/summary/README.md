@@ -13,3 +13,5 @@ Recommended session-start prompt:
 ```text
 Please read micromarket/docs/summary/current-state.md and continue from the "Next Recommended Work" section.
 ```
+
+For sentiment or model-quality work, also read `micromarket/docs/13-model-quality-plan.md`.

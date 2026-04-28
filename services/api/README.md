@@ -332,6 +332,23 @@ repeatable measurement floor before introducing FinBERT, LLM-assisted sentiment,
 or a custom model. Future providers should continue to satisfy the local
 `SentimentProvider` protocol and store model/provider versions with every run.
 
+The next sentiment-quality step is documented in
+`../../docs/13-model-quality-plan.md`: add curated labeled fixtures, improve the
+deterministic baseline's finance lexicon, mixed-signal handling, driver tags,
+confidence scoring, and evidence snippets, then compare any later provider
+against the same fixtures.
+
+Before those comparisons are trusted, the API should support as-of-time aligned
+historical replay. A historical article published on `2026-03-05` should be
+analyzed with market features available around `2026-03-05`, with forecast
+targets starting from that date, even if the article is ingested later.
+
+Ollama is the preferred first local LLM experiment once the fixture set exists.
+It should be added as an optional `OllamaSentimentProvider`, selected by
+configuration such as `SENTIMENT_PROVIDER=ollama`, and accessed through the same
+provider boundary. Tests should use fake responses and must not require Ollama,
+network access, Google Colab, Databricks, or any hosted model runtime.
+
 ## URL Ingestion
 
 `POST /analyses` accepts either manual article text or an absolute `http(s)`

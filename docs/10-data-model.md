@@ -8,6 +8,7 @@ The data model must preserve enough lineage to answer:
 - What sentiment model produced the sentiment scores?
 - What forecast model produced the forecast?
 - What market data was available at forecast time?
+- What timestamp did the analysis simulate or represent?
 - What happened later?
 - Did the model beat a naive baseline?
 
@@ -71,6 +72,8 @@ Fields:
 - `status`: `created`, `running`, `completed`, `failed`
 - `primary_horizon`: default `3_trading_days`
 - `input_mode`: `manual_text`, `url`, `mixed`
+- `analysis_as_of`
+- `analysis_as_of_source`: `live`, `article_published_at`, `manual_historical`
 - `created_at`
 - `completed_at`
 - `error_message`
@@ -81,6 +84,7 @@ Notes:
 - This is the top-level object the UI should render.
 - The UI should group many `analyses` records under the same `asset_id`/ticker so repeated runs for AMD, SPY, or another symbol form a ticker research history.
 - Analysis records remain immutable run lineage; ticker grouping is a read/navigation pattern, not a replacement for analysis-level records.
+- `analysis_as_of` is the decision timestamp for model inputs and forecast targets. Live runs can use the current analysis time. Historical replay and training runs should use the article publish time or an explicit historical timestamp.
 
 ## `articles`
 
@@ -200,11 +204,15 @@ Fields:
 - `target_start_price`
 - `target_start_time`
 - `target_end_time`
+- `feature_window_start_time`
+- `feature_window_end_time`
 
 Notes:
 
 - Store multiple horizons per analysis.
 - MVP UI displays 3 trading days by default.
+- Feature windows should end at or before the analysis `analysis_as_of` timestamp.
+- Forecast target windows should start from the analysis `analysis_as_of` timestamp, not from article ingestion time.
 
 ## `forecast_outcomes`
 
@@ -333,6 +341,8 @@ Defer:
 - Every forecast must include a model name and model version.
 - Every forecast must include a horizon.
 - Every forecast must be evaluable later.
+- Every analysis must define the `analysis_as_of` timestamp used to align article evidence, market features, forecast targets, and outcomes.
+- Historical analysis must not use market data, article evidence, or outcome data that became available after `analysis_as_of`.
 - Sentiment evidence should never be detached from its source article.
 - Raw article text should be persisted before model scoring.
 - Missing market metrics should be stored as null, not fabricated.

@@ -6,6 +6,8 @@ Build a local-first end-to-end system that accepts a ticker and article evidence
 
 The MVP should keep analysis execution one ticker at a time while organizing history by ticker. A ticker acts as the durable research workspace for repeated runs, articles, evidence decisions, forecasts, sentiment, limitations, and later evaluation outcomes.
 
+Historical model quality depends on time alignment. Analyses should resolve an `analysis_as_of` timestamp, and all article evidence, market features, forecast targets, and outcomes should be computed relative to that timestamp to avoid lookahead bias.
+
 ## Phase 0: Project Setup
 
 Deliverables:
@@ -45,6 +47,7 @@ Acceptance criteria:
 
 - API can create and retrieve a test analysis.
 - Database schema supports the MVP data model.
+- Analysis records can store the decision timestamp used for live or historical replay runs.
 - Tests cover basic create/read paths.
 
 ## Phase 1.5: Research Notebook Workspace
@@ -91,6 +94,7 @@ Deliverables:
 - `MarketDataProvider` interface.
 - `yfinance` implementation.
 - Quote/history retrieval.
+- Historical lookback retrieval ending at an analysis as-of timestamp.
 - Asset lookup for US equities and ETFs.
 - Market quote persistence.
 
@@ -98,6 +102,7 @@ Acceptance criteria:
 
 - API retrieves quote and recent history for a common stock.
 - API retrieves data for a common ETF.
+- API can retrieve historical lookback data for a ticker without using prices after the requested as-of timestamp.
 - Provider errors return clear failure messages.
 - Provider-specific objects do not leak across the app.
 
@@ -107,7 +112,9 @@ Deliverables:
 
 - `SentimentProvider` interface.
 - Baseline sentiment provider.
-- Optional LLM-assisted sentiment provider if API key exists.
+- Curated sentiment fixture set for repeatable provider evaluation.
+- Improved deterministic baseline sentiment provider.
+- Optional Ollama/local LLM-assisted sentiment provider if configured.
 - Evidence snippets and driver extraction.
 - Sentiment aggregate generation.
 
@@ -117,12 +124,15 @@ Acceptance criteria:
 - Analysis receives aggregate sentiment and evidence-strength score.
 - Low article count and conflicting evidence reduce confidence.
 - Sentiment run records include model name/version.
+- Provider tests remain deterministic and offline through fake providers.
+- Ollama or hosted notebook experiments are optional and do not become production runtime requirements.
 
 ## Phase 5: Forecast Pipeline
 
 Deliverables:
 
 - Rule-based baseline forecast model.
+- As-of-time aligned feature snapshot generation.
 - Forecast records for:
   - next close,
   - 3 trading days,
@@ -134,6 +144,8 @@ Acceptance criteria:
 
 - Analysis produces forecasts for all MVP horizons.
 - Forecast records include model version and feature snapshot.
+- Forecast records include feature-window and target-window timestamps.
+- Historical forecasts start from the analysis as-of timestamp, not ingestion time.
 - Forecast can return `uncertain`.
 - Forecast explanation links back to article/sentiment evidence.
 
@@ -150,6 +162,7 @@ Acceptance criteria:
 
 - Expired forecasts can be evaluated.
 - Actual outcome is stored.
+- Outcome lookup starts from the stored forecast target window.
 - Directional correctness and absolute error are calculated.
 - Model performance can be compared to no-change and momentum baselines.
 
@@ -223,6 +236,9 @@ Only after this works should the UI and URL ingestion expand.
 10. URL ingestion.
 11. Evaluation refresh.
 12. Ticker-centered analysis history.
+13. Analysis as-of time and historical market lookback alignment.
+14. Sentiment fixture set and improved baseline sentiment.
+15. Optional Ollama sentiment provider.
 
 ## Risks
 
@@ -234,6 +250,28 @@ Mitigation:
 - Compare to baselines.
 - Treat early forecasts as experiments.
 - Use notebooks to inspect failures, tune baseline parameters, and validate confidence calibration before promoting changes into API code.
+- Improve sentiment quality before adding forecast complexity.
+- Compare baseline, local LLM, and any hosted experiments against the same fixture set.
+
+### Historical Evaluation Uses Future Data
+
+Mitigation:
+
+- Store `analysis_as_of` for every analysis.
+- Store feature-window start/end and forecast target-window start/end for every forecast.
+- Derive historical runs from article `published_at` or an explicit historical timestamp.
+- Fetch market lookback windows ending at `analysis_as_of`.
+- Reject or flag articles whose publish time is after the analysis as-of time.
+
+### LLM Output Is Unstable
+
+Mitigation:
+
+- Require structured JSON output.
+- Validate model responses before persistence.
+- Store provider/model versions and limitations.
+- Keep deterministic baseline fallback available.
+- Use fake providers in tests instead of requiring Ollama or hosted services.
 
 ### Article Extraction Is Unreliable
 
@@ -266,6 +304,8 @@ MVP is done when:
 - User can analyze one ticker with manual text and pasted URL evidence.
 - User can revisit prior analyses grouped by ticker.
 - System produces sentiment, forecast, confidence, and limitations.
+- Sentiment provider quality is measured against curated fixtures.
 - Forecast records are stored with model version and horizon.
+- Forecast and evaluation records are aligned to analysis as-of time.
 - Evaluation refresh can compare expired forecasts to actual outcomes.
 - UI presents forecast and evidence without direct financial advice language.

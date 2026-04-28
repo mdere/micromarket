@@ -22,8 +22,9 @@ The initial product-management package follows the workflow in `ai_tools/AI-Prod
 11. [Data Model](docs/10-data-model.md)
 12. [Model Evaluation Plan](docs/11-model-evaluation-plan.md)
 13. [Implementation Roadmap](docs/12-implementation-roadmap.md)
-14. [Session Summary / Handoff](docs/summary/current-state.md)
-15. [Operating Guide / Guardrails](docs/summary/operating-guide.md)
+14. [Model Quality Plan](docs/13-model-quality-plan.md)
+15. [Session Summary / Handoff](docs/summary/current-state.md)
+16. [Operating Guide / Guardrails](docs/summary/operating-guide.md)
 
 ## Project Structure
 

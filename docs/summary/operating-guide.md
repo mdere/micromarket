@@ -14,6 +14,10 @@ The highest-risk work is data/model quality, lineage, explainability, and evalua
 
 The current UI/product direction is ticker-centered history: the MVP still runs one user-triggered analysis at a time, but repeated analyses for the same symbol should be grouped under that ticker so the user can revisit all related article evidence, forecasts, sentiment, limitations, and later evaluation outcomes.
 
+The current model direction is model-quality improvement. Start with stronger deterministic sentiment fixtures and baseline scoring, then add optional local LLM sentiment through Ollama behind the existing `SentimentProvider` interface. Hosted tools such as Google Colab or Databricks may be used for exploratory experiments only; they must not become production runtime dependencies.
+
+Before sentiment/model improvements are judged, historical analyses must be time-aligned. Every run should have an `analysis_as_of` timestamp, and historical replay should use only article evidence and market data available at or before that timestamp.
+
 ## Session Start Protocol
 
 At the start of every resumed session:
@@ -104,6 +108,9 @@ Frontend validation should be added once active UI work resumes.
 - Compare forecasts against naive baselines.
 - Treat early forecasts as experiments until evaluation proves signal.
 - Promote stable notebook logic into tested backend modules before the API depends on it.
+- Prevent lookahead bias by aligning article publish time, market lookbacks, forecast targets, and outcomes to each run's `analysis_as_of` timestamp.
+- Improve sentiment quality with measured fixtures before relying on prompt/model intuition.
+- Keep Ollama and hosted notebook experiments optional and configurable.
 
 ## API Guardrails
 
@@ -135,6 +142,7 @@ Update docs when behavior or decisions change:
 - `services/api/README.md` for API setup, runtime behavior, provider behavior, and sample requests.
 - `notebooks/README.md` for notebook workflow changes.
 - `docs/summary/current-state.md` for current implementation state and next recommended work.
+- `docs/13-model-quality-plan.md` for sentiment/model-quality plans and provider progression.
 - Architecture/roadmap docs when decisions change, not for every small implementation detail.
 
 ## Current Build Direction
@@ -155,8 +163,10 @@ Continue the first backend vertical slice:
 12. API error states and evaluation summary visibility: done.
 13. Evaluation refresh controls and dashboard component refactor: done.
 14. Panel-level loading states and clearer failed-analysis detail: done.
-15. Evidence grouping/filtering and article-history reuse markers: in progress.
-16. Next: UI polish around empty-state ergonomics and responsive density.
+15. Evidence grouping/filtering and article-history reuse markers: done.
+16. Model-quality plan and sentiment provider direction: documented.
+17. Analysis as-of time and historical replay direction: documented.
+18. Next: implement as-of-time aligned historical replay before expanding sentiment provider complexity.
 
 ## Escalation Triggers
 
