@@ -145,8 +145,9 @@ Continue the first backend vertical slice:
 5. Baseline sentiment provider and persistence: done.
 6. Baseline forecast service and persisted forecast records: done.
 7. Evaluation refresh and summary: done.
-8. Next: URL ingestion.
-9. Then: minimal UI over the stable API response.
+8. URL ingestion: done.
+9. Next: article relevance, duplicate handling, and extraction failure reporting.
+10. Then: minimal UI over the stable API response.
 
 ## Escalation Triggers
 

@@ -10,3 +10,9 @@ class ArtifactStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
         return str(path)
+
+    def write_article_html(self, content_hash: str, html: str) -> str:
+        path = self.root / "raw" / "articles" / f"{content_hash}.html"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(html, encoding="utf-8")
+        return str(path)

@@ -10,6 +10,8 @@ from sqlalchemy.pool import StaticPool
 from app.core.config import Settings, get_settings
 from app.db.models import Base
 from app.db.session import get_db
+from app.ingestion.dependencies import get_url_extraction_provider
+from app.ingestion.url_provider import URLExtractionResult
 from app.main import app
 from app.market_data.dependencies import get_market_data_provider
 from app.market_data.provider import MarketQuote
@@ -28,6 +30,21 @@ class FakeMarketDataProvider:
             quote_time=datetime(2026, 4, 26, 16, 0, tzinfo=timezone.utc),
             provider="fake-market-data",
             market_cap=123000000,
+        )
+
+
+class FakeURLExtractionProvider:
+    def extract(self, url: str) -> URLExtractionResult:
+        return URLExtractionResult(
+            url=url,
+            final_url="https://example.com/final-spy-article",
+            title="Extracted SPY article",
+            source="Example News",
+            text=(
+                "SPY demand improved as market breadth expanded. "
+                "The article noted resilient flows and constructive momentum."
+            ),
+            raw_html="<html><body><article>SPY demand improved.</article></body></html>",
         )
 
 
@@ -53,6 +70,7 @@ def build_test_app(tmp_path):
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_settings] = override_settings
     app.dependency_overrides[get_market_data_provider] = lambda: FakeMarketDataProvider()
+    app.dependency_overrides[get_url_extraction_provider] = lambda: FakeURLExtractionProvider()
     return TestClient(app)
 
 
@@ -122,6 +140,40 @@ def test_create_analysis_requires_manual_text(tmp_path) -> None:
         response = client.post("/analyses", json={"ticker": "AAPL", "articles": []})
 
         assert response.status_code == 400
-        assert "manual article" in response.json()["detail"]
+        assert "manual text or an absolute URL" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_create_analysis_with_url_article(tmp_path) -> None:
+    client = build_test_app(tmp_path)
+
+    try:
+        response = client.post(
+            "/analyses",
+            json={
+                "ticker": "spy",
+                "articles": [
+                    {
+                        "url": "https://example.com/spy-article",
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 201
+        created = response.json()
+        assert created["input_mode"] == "url"
+        assert created["articles"][0]["title"] == "Extracted SPY article"
+        assert created["articles"][0]["source"] == "Example News"
+        assert created["articles"][0]["url"] == "https://example.com/final-spy-article"
+        assert created["articles"][0]["input_type"] == "url"
+        assert created["sentiment_runs"][0]["sentiment_label"] == "positive"
+        assert len(created["forecast_runs"]) == 3
+
+        raw_artifact_path = created["articles"][0]["raw_artifact_path"]
+        assert raw_artifact_path is not None
+        assert raw_artifact_path.endswith(".html")
+        assert "SPY demand improved" in open(raw_artifact_path, encoding="utf-8").read()
     finally:
         app.dependency_overrides.clear()

@@ -73,6 +73,7 @@ As of the latest handoff, the backend vertical slice has:
 - `yfinance` market quote provider and quote persistence,
 - baseline sentiment provider and sentiment persistence,
 - baseline forecast provider and forecast persistence,
-- evaluation refresh and summary over persisted forecast outcomes.
+- evaluation refresh and summary over persisted forecast outcomes,
+- URL article ingestion through a provider boundary.
 
-The next major backend step is URL ingestion over the stable analysis/evaluation backbone.
+The next major backend step is article relevance, duplicate handling, and extraction failure reporting.

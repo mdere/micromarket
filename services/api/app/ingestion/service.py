@@ -18,13 +18,17 @@ class ArticleIngestionService:
     """
 
     def normalize_text(
-        self, text: str, title: str | None = None, source: str | None = None
+        self,
+        text: str,
+        title: str | None = None,
+        source: str | None = None,
+        url: str | None = None,
     ) -> NormalizedArticle:
         cleaned = " ".join(text.split())
         return NormalizedArticle(
             title=title,
             source=source or "manual",
-            url=None,
+            url=url,
             text=cleaned,
             content_hash=sha256(cleaned.encode("utf-8")).hexdigest(),
         )

@@ -61,6 +61,21 @@ curl -X POST http://localhost:8000/analyses \
   }'
 ```
 
+Create a sample URL-based analysis:
+
+```bash
+curl -X POST http://localhost:8000/analyses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticker": "SPY",
+    "articles": [
+      {
+        "url": "https://example.com/market-commentary"
+      }
+    ]
+  }'
+```
+
 The response should include:
 
 - persisted article metadata,
@@ -160,12 +175,12 @@ Current API endpoints:
 - `GET /evaluations/summary`
 
 The analysis route now persists manual text submissions, stores article text
-artifacts, fetches a `yfinance` market quote through the provider interface,
+and URL-extracted submissions, stores article artifacts, fetches a `yfinance`
+market quote through the provider interface,
 persists the quote snapshot, scores article sentiment with the baseline
 provider, persists sentiment runs and an aggregate, creates baseline forecast
 runs, and returns stored analysis/article/quote/sentiment/forecast metadata.
-Evaluation refresh can now persist outcomes for expired forecast runs. URL
-extraction is still scaffold-level work.
+Evaluation refresh can persist outcomes for expired forecast runs.
 
 Run database migrations from `services/api`:
 
@@ -200,9 +215,10 @@ python -m ruff check app tests
 - The initial market-data implementation is `app/market_data/yfinance_provider.py`.
 - The initial sentiment implementation is `app/sentiment/baseline.py`.
 - The initial forecast implementation is `app/forecasting/baseline.py`.
+- The initial URL extraction implementation is `app/ingestion/url_provider.py`.
 
-The next backend milestone is URL ingestion over the stable analysis and
-evaluation backbone.
+The next backend milestone is strengthening article relevance, duplicate
+handling, and extraction failure reporting before UI work expands.
 
 ## Market Data Provider
 
@@ -306,6 +322,23 @@ This baseline is not intended to be the final model. It gives the project a
 repeatable measurement floor before introducing FinBERT, LLM-assisted sentiment,
 or a custom model. Future providers should continue to satisfy the local
 `SentimentProvider` protocol and store model/provider versions with every run.
+
+## URL Ingestion
+
+`POST /analyses` accepts either manual article text or an absolute `http(s)`
+article URL for each submitted article. Manual `text` takes precedence when both
+`text` and `url` are present.
+
+The MVP URL extractor uses `trafilatura` behind the local
+`URLExtractionProvider` protocol in `app/ingestion/url_provider.py`.
+`trafilatura` is used for readable main-text extraction and metadata such as
+title and site name, while raw fetching is kept local with `httpx`. Extracted
+article text is stored as a `.txt` artifact and raw fetched HTML is stored as a
+`.html` artifact under the local artifact root.
+
+URL extraction failures return a `502` response and mark the analysis as
+`failed`. Tests inject a fake URL extraction provider and do not require network
+access.
 
 ## Forecast Provider
 

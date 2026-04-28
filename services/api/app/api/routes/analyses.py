@@ -19,11 +19,13 @@ from app.db.models import (
 from app.db.session import get_db
 from app.forecasting.dependencies import get_forecast_provider
 from app.forecasting.provider import ForecastInput, ForecastProvider
-from app.ingestion.service import ArticleIngestionService
+from app.ingestion.dependencies import get_url_extraction_provider
+from app.ingestion.service import ArticleIngestionService, NormalizedArticle
+from app.ingestion.url_provider import URLExtractionError, URLExtractionProvider
 from app.market_data.dependencies import get_market_data_provider
 from app.market_data.provider import MarketDataProvider
 from app.market_data.yfinance_provider import MarketDataProviderError
-from app.schemas.analysis import AnalysisCreate, AnalysisResponse
+from app.schemas.analysis import AnalysisCreate, AnalysisResponse, ArticleInput
 from app.sentiment.dependencies import get_sentiment_provider
 from app.sentiment.provider import SentimentProvider
 from app.storage import ArtifactStore
@@ -39,14 +41,19 @@ def create_analysis(
     market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
     sentiment_provider: SentimentProvider = Depends(get_sentiment_provider),
     forecast_provider: ForecastProvider = Depends(get_forecast_provider),
+    url_extraction_provider: URLExtractionProvider = Depends(get_url_extraction_provider),
 ) -> AnalysisResponse:
     ticker = payload.ticker.upper().strip()
-    manual_articles = [article for article in payload.articles if article.text and article.text.strip()]
+    article_inputs = [
+        article
+        for article in payload.articles
+        if (article.text and article.text.strip()) or (article.url and article.url.strip())
+    ]
 
-    if not manual_articles:
+    if not article_inputs:
         raise HTTPException(
             status_code=400,
-            detail="At least one manual article with text is required for the first vertical slice.",
+            detail="At least one article with manual text or an absolute URL is required.",
         )
 
     asset = db.scalar(select(Asset).where(Asset.symbol == ticker))
@@ -55,7 +62,7 @@ def create_analysis(
         db.add(asset)
         db.flush()
 
-    input_mode = "manual_text"
+    input_mode = _input_mode(article_inputs)
     analysis = Analysis(
         asset_id=asset.id,
         status="running",
@@ -63,7 +70,7 @@ def create_analysis(
         input_mode=input_mode,
         limitations=[
             "Research-only output; not financial advice.",
-            "This first vertical slice stores manual article evidence only.",
+            "URL extraction quality varies by publisher and page structure.",
         ],
     )
     db.add(analysis)
@@ -104,19 +111,28 @@ def create_analysis(
     sentiment_scores: list[Decimal] = []
     included_article_count = 0
 
-    for article_input in manual_articles:
-        normalized = ingestion.normalize_text(
-            article_input.text or "", title=article_input.title, source=article_input.source
-        )
-        artifact_path = artifacts.write_article_text(normalized.content_hash, normalized.text)
+    for article_input in article_inputs:
+        try:
+            normalized, input_type, raw_artifact_path, extracted_artifact_path = _prepare_article(
+                article_input=article_input,
+                ingestion=ingestion,
+                artifacts=artifacts,
+                url_extraction_provider=url_extraction_provider,
+            )
+        except URLExtractionError as exc:
+            analysis.status = "failed"
+            analysis.error_message = str(exc)
+            db.commit()
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
         article = Article(
             asset_id=asset.id,
             title=normalized.title,
             source=normalized.source,
-            url=article_input.url,
-            input_type="manual_text",
-            raw_artifact_path=artifact_path,
-            extracted_text_artifact_path=artifact_path,
+            url=normalized.url,
+            input_type=input_type,
+            raw_artifact_path=raw_artifact_path,
+            extracted_text_artifact_path=extracted_artifact_path,
             content_hash=normalized.content_hash,
             language="en",
             word_count=len(normalized.text.split()),
@@ -202,7 +218,7 @@ def create_analysis(
     db.commit()
 
     persisted = _get_analysis(db, analysis.id)
-    return _to_response(persisted, "Analysis created with persisted manual article evidence.")
+    return _to_response(persisted, "Analysis created with persisted article evidence.")
 
 
 @router.get("/{analysis_id}", response_model=AnalysisResponse)
@@ -341,6 +357,47 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
             for run in sorted(analysis.forecast_runs, key=lambda item: item.horizon)
         ],
     )
+
+
+def _input_mode(article_inputs: list[ArticleInput]) -> str:
+    has_text = any(article.text and article.text.strip() for article in article_inputs)
+    has_url = any(article.url and article.url.strip() and not article.text for article in article_inputs)
+    if has_text and has_url:
+        return "mixed"
+    if has_url:
+        return "url"
+    return "manual_text"
+
+
+def _prepare_article(
+    article_input: ArticleInput,
+    ingestion: ArticleIngestionService,
+    artifacts: ArtifactStore,
+    url_extraction_provider: URLExtractionProvider,
+) -> tuple[NormalizedArticle, str, str, str]:
+    if article_input.text and article_input.text.strip():
+        normalized = ingestion.normalize_text(
+            article_input.text,
+            title=article_input.title,
+            source=article_input.source,
+            url=article_input.url,
+        )
+        artifact_path = artifacts.write_article_text(normalized.content_hash, normalized.text)
+        return normalized, "manual_text", artifact_path, artifact_path
+
+    if article_input.url is None:
+        raise URLExtractionError("Article URL is required when manual text is absent.")
+
+    extracted = url_extraction_provider.extract(article_input.url)
+    normalized = ingestion.normalize_text(
+        extracted.text,
+        title=article_input.title or extracted.title,
+        source=article_input.source or extracted.source,
+        url=extracted.final_url,
+    )
+    raw_artifact_path = artifacts.write_article_html(normalized.content_hash, extracted.raw_html)
+    extracted_artifact_path = artifacts.write_article_text(normalized.content_hash, normalized.text)
+    return normalized, "url", raw_artifact_path, extracted_artifact_path
 
 
 def _decimal_to_str(value: object | None) -> str | None:
