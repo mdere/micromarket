@@ -11,7 +11,7 @@ from app.core.config import Settings, get_settings
 from app.db.models import Base
 from app.db.session import get_db
 from app.ingestion.dependencies import get_url_extraction_provider
-from app.ingestion.url_provider import URLExtractionResult
+from app.ingestion.url_provider import URLExtractionError, URLExtractionResult
 from app.main import app
 from app.market_data.dependencies import get_market_data_provider
 from app.market_data.provider import MarketQuote
@@ -48,7 +48,12 @@ class FakeURLExtractionProvider:
         )
 
 
-def build_test_app(tmp_path):
+class FailingURLExtractionProvider:
+    def extract(self, url: str) -> URLExtractionResult:
+        raise URLExtractionError(f"No article text could be extracted from {url}.")
+
+
+def build_test_app(tmp_path, url_extraction_provider=None):
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -70,7 +75,9 @@ def build_test_app(tmp_path):
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_settings] = override_settings
     app.dependency_overrides[get_market_data_provider] = lambda: FakeMarketDataProvider()
-    app.dependency_overrides[get_url_extraction_provider] = lambda: FakeURLExtractionProvider()
+    app.dependency_overrides[get_url_extraction_provider] = (
+        lambda: url_extraction_provider or FakeURLExtractionProvider()
+    )
     return TestClient(app)
 
 
@@ -102,8 +109,11 @@ def test_create_and_get_analysis(tmp_path) -> None:
         assert created["sentiment_runs"][0]["provider"] == "baseline"
         assert created["sentiment_runs"][0]["sentiment_label"] == "positive"
         assert created["sentiment_aggregate"]["article_count"] == 1
+        assert created["sentiment_aggregate"]["included_article_count"] == 1
         assert created["sentiment_aggregate"]["positive_count"] == 1
         assert created["sentiment_aggregate"]["aggregate_score"] == "1.00000"
+        assert created["articles"][0]["included_in_forecast"] is True
+        assert created["articles"][0]["relevance_score"] == "0.90000"
         assert len(created["forecast_runs"]) == 3
         primary_forecast = next(
             run for run in created["forecast_runs"] if run["horizon"] == "3_trading_days"
@@ -170,10 +180,92 @@ def test_create_analysis_with_url_article(tmp_path) -> None:
         assert created["articles"][0]["input_type"] == "url"
         assert created["sentiment_runs"][0]["sentiment_label"] == "positive"
         assert len(created["forecast_runs"]) == 3
+        assert created["articles"][0]["included_in_forecast"] is True
+        assert created["articles"][0]["relevance_score"] == "1.00000"
 
         raw_artifact_path = created["articles"][0]["raw_artifact_path"]
         assert raw_artifact_path is not None
         assert raw_artifact_path.endswith(".html")
         assert "SPY demand improved" in open(raw_artifact_path, encoding="utf-8").read()
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_create_analysis_excludes_duplicate_article_from_aggregate(tmp_path) -> None:
+    client = build_test_app(tmp_path)
+
+    try:
+        article_text = "SPY saw improving demand and resilient market breadth."
+        response = client.post(
+            "/analyses",
+            json={
+                "ticker": "spy",
+                "articles": [
+                    {"title": "First SPY note", "text": article_text},
+                    {"title": "Second SPY note", "text": article_text},
+                ],
+            },
+        )
+
+        assert response.status_code == 201
+        created = response.json()
+        assert created["sentiment_aggregate"]["article_count"] == 2
+        assert created["sentiment_aggregate"]["included_article_count"] == 1
+        assert len(created["sentiment_runs"]) == 2
+        assert created["articles"][0]["included_in_forecast"] is True
+        assert created["articles"][1]["included_in_forecast"] is False
+        assert created["articles"][1]["duplicate_group_id"] == created["articles"][1]["content_hash"]
+        assert "Duplicate article content" in created["articles"][1]["exclusion_reason"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_create_analysis_excludes_low_relevance_article_from_aggregate(tmp_path) -> None:
+    client = build_test_app(tmp_path)
+
+    try:
+        response = client.post(
+            "/analyses",
+            json={
+                "ticker": "AAPL",
+                "articles": [
+                    {
+                        "title": "Recipe note",
+                        "text": "This recipe explains how to bake bread with flour and water.",
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 201
+        created = response.json()
+        assert created["sentiment_aggregate"]["article_count"] == 1
+        assert created["sentiment_aggregate"]["included_article_count"] == 0
+        assert created["sentiment_aggregate"]["evidence_strength_score"] == "0.00000"
+        assert created["articles"][0]["included_in_forecast"] is False
+        assert created["articles"][0]["relevance_score"] == "0.00000"
+        assert "relevant enough" in created["articles"][0]["exclusion_reason"]
+        primary_forecast = next(
+            run for run in created["forecast_runs"] if run["horizon"] == "3_trading_days"
+        )
+        assert primary_forecast["feature_snapshot"]["included_article_count"] == 0
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_create_analysis_reports_url_extraction_failure(tmp_path) -> None:
+    client = build_test_app(tmp_path, url_extraction_provider=FailingURLExtractionProvider())
+
+    try:
+        response = client.post(
+            "/analyses",
+            json={
+                "ticker": "SPY",
+                "articles": [{"url": "https://example.com/no-text"}],
+            },
+        )
+
+        assert response.status_code == 502
+        assert "No article text could be extracted" in response.json()["detail"]
     finally:
         app.dependency_overrides.clear()

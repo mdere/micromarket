@@ -85,6 +85,10 @@ The response should include:
 - three baseline `forecast_runs` records for next close, 3 trading days, and
   7 trading days.
 
+Article metadata includes `relevance_score`, `duplicate_group_id`,
+`included_in_forecast`, and `exclusion_reason` so weak or duplicate evidence can
+be audited.
+
 If `POST /analyses` returns a provider error, confirm your network can reach
 Yahoo Finance through `yfinance`. Unit tests use a fake provider and do not need
 network access.
@@ -217,8 +221,7 @@ python -m ruff check app tests
 - The initial forecast implementation is `app/forecasting/baseline.py`.
 - The initial URL extraction implementation is `app/ingestion/url_provider.py`.
 
-The next backend milestone is strengthening article relevance, duplicate
-handling, and extraction failure reporting before UI work expands.
+The next backend milestone is a minimal UI over the stable API response.
 
 ## Market Data Provider
 
@@ -316,7 +319,9 @@ negative financial-language lexicon to produce:
 During `POST /analyses`, the API stores one `sentiment_runs` row per article and
 one `sentiment_aggregates` row for the analysis. The aggregate stores article
 counts, positive/neutral/negative/mixed counts, aggregate score, agreement
-score, evidence-strength score, and a short summary.
+score, evidence-strength score, and a short summary. Duplicate or low-relevance
+articles still receive sentiment runs for lineage, but excluded evidence is not
+included in the aggregate sentiment used by forecasts.
 
 This baseline is not intended to be the final model. It gives the project a
 repeatable measurement floor before introducing FinBERT, LLM-assisted sentiment,
@@ -339,6 +344,21 @@ article text is stored as a `.txt` artifact and raw fetched HTML is stored as a
 URL extraction failures return a `502` response and mark the analysis as
 `failed`. Tests inject a fake URL extraction provider and do not require network
 access.
+
+## Evidence Filtering
+
+`POST /analyses` applies a deterministic first-pass evidence policy before
+building aggregate sentiment and forecasts:
+
+- article text, title, and URL are scored for ticker relevance,
+- duplicate content hashes are grouped,
+- duplicate or low-relevance articles are persisted but excluded from forecast
+  inputs,
+- exclusion metadata is returned with article responses.
+
+This is intentionally conservative and transparent rather than a final
+relevance model. It gives later UI and notebook work enough lineage to inspect
+why evidence did or did not influence a forecast.
 
 ## Forecast Provider
 

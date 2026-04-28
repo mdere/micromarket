@@ -23,6 +23,10 @@ class ArticleResponse(BaseModel):
     content_hash: str
     word_count: int
     raw_artifact_path: str | None
+    relevance_score: str | None = None
+    duplicate_group_id: str | None = None
+    included_in_forecast: bool = True
+    exclusion_reason: str | None = None
 
 
 class MarketQuoteResponse(BaseModel):

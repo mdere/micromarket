@@ -69,11 +69,16 @@ The product is research-only decision support. It should not issue direct buy/se
   - `GET /evaluations/summary` returns total evaluated forecasts plus per-horizon accuracy/error summaries.
   - The market-data provider interface now includes historical close lookup for evaluation.
   - Tests use a fake market-data provider so evaluation remains offline and deterministic.
-- URL ingestion slice is implemented in the working tree:
+- URL ingestion slice is implemented:
   - `app/ingestion/url_provider.py` defines a URL extraction provider protocol and `trafilatura` implementation.
   - `POST /analyses` accepts URL-only articles, stores raw HTML and extracted text artifacts, and runs the existing sentiment/forecast pipeline.
   - Manual text remains supported and takes precedence when both text and URL are supplied.
   - Tests use a fake URL extraction provider so URL ingestion stays offline and deterministic.
+- Evidence filtering slice is implemented:
+  - `app/ingestion/evidence.py` scores article relevance with deterministic ticker/market-context rules.
+  - Duplicate content hashes and low-relevance articles are persisted but excluded from aggregate sentiment and forecast inputs.
+  - Article responses include relevance, duplicate group, inclusion, and exclusion metadata.
+  - URL extraction failures return clear `502` responses and mark analyses as failed.
 
 ## Decisions From Questionnaire
 
@@ -207,9 +212,9 @@ The current work is implementing the first backend vertical slice:
 7. Baseline sentiment provider and persistence are in place.
 8. Baseline forecast provider and persisted forecast records are in place.
 9. Evaluation refresh for expired forecasts and stored outcomes is in place.
-10. URL ingestion over the stable analysis/evaluation backbone is in place in the working tree.
-11. Next: broaden validation with full backend tests/lint/migrations, then commit the completed URL ingestion slice.
-12. Then strengthen article relevance, duplicate handling, and extraction failure reporting.
+10. URL ingestion over the stable analysis/evaluation backbone is in place.
+11. Article relevance, duplicate handling, and extraction failure reporting are in place.
+12. Next: build a minimal UI over the stable API response.
 
 ## Suggested Recommendation To Explore Next
 
@@ -249,4 +254,4 @@ When resuming:
 10. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
 11. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
-13. Continue with the backend vertical slice: article relevance, duplicate handling, and extraction failure reporting.
+13. Continue with the backend vertical slice: minimal UI over the stable API response.

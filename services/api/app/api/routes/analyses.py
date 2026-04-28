@@ -20,6 +20,7 @@ from app.db.session import get_db
 from app.forecasting.dependencies import get_forecast_provider
 from app.forecasting.provider import ForecastInput, ForecastProvider
 from app.ingestion.dependencies import get_url_extraction_provider
+from app.ingestion.evidence import ArticleEvidencePolicy
 from app.ingestion.service import ArticleIngestionService, NormalizedArticle
 from app.ingestion.url_provider import URLExtractionError, URLExtractionProvider
 from app.market_data.dependencies import get_market_data_provider
@@ -107,8 +108,11 @@ def create_analysis(
 
     ingestion = ArticleIngestionService()
     artifacts = ArtifactStore(settings.artifact_root)
-    sentiment_labels: list[str] = []
-    sentiment_scores: list[Decimal] = []
+    evidence_policy = ArticleEvidencePolicy()
+    seen_hashes: set[str] = set()
+    included_sentiment_labels: list[str] = []
+    included_sentiment_scores: list[Decimal] = []
+    article_count = 0
     included_article_count = 0
 
     for article_input in article_inputs:
@@ -140,19 +144,25 @@ def create_analysis(
         )
         db.add(article)
         db.flush()
+        evidence_decision = evidence_policy.decide(normalized, ticker, seen_hashes)
+        seen_hashes.add(normalized.content_hash)
         db.add(
             AnalysisArticle(
                 analysis_id=analysis.id,
                 article_id=article.id,
-                relevance_score=None,
-                included_in_forecast=True,
+                relevance_score=evidence_decision.relevance_score,
+                duplicate_group_id=evidence_decision.duplicate_group_id,
+                included_in_forecast=evidence_decision.included_in_forecast,
+                exclusion_reason=evidence_decision.exclusion_reason,
             )
         )
         sentiment = sentiment_provider.score_article(normalized.text, ticker)
-        sentiment_labels.append(sentiment.label)
         sentiment_score = Decimal(str(sentiment.score))
-        sentiment_scores.append(sentiment_score)
-        included_article_count += 1
+        article_count += 1
+        if evidence_decision.included_in_forecast:
+            included_sentiment_labels.append(sentiment.label)
+            included_sentiment_scores.append(sentiment_score)
+            included_article_count += 1
         db.add(
             SentimentRun(
                 analysis_id=analysis.id,
@@ -171,8 +181,9 @@ def create_analysis(
 
     sentiment_aggregate = _build_sentiment_aggregate(
         analysis_id=analysis.id,
-        labels=sentiment_labels,
-        scores=sentiment_scores,
+        article_count=article_count,
+        included_labels=included_sentiment_labels,
+        included_scores=included_sentiment_scores,
         included_article_count=included_article_count,
     )
     db.add(sentiment_aggregate)
@@ -233,6 +244,7 @@ def list_analyses(db: Session = Depends(get_db)) -> list[AnalysisResponse]:
         select(Analysis)
         .options(selectinload(Analysis.asset), selectinload(Analysis.articles))
         .options(selectinload(Analysis.market_quotes))
+        .options(selectinload(Analysis.analysis_articles))
         .options(selectinload(Analysis.sentiment_runs))
         .options(selectinload(Analysis.sentiment_aggregate))
         .options(selectinload(Analysis.forecast_runs))
@@ -250,6 +262,7 @@ def _get_analysis(db: Session, analysis_id: str) -> Analysis:
             selectinload(Analysis.asset),
             selectinload(Analysis.articles),
             selectinload(Analysis.market_quotes),
+            selectinload(Analysis.analysis_articles),
             selectinload(Analysis.sentiment_runs),
             selectinload(Analysis.sentiment_aggregate),
             selectinload(Analysis.forecast_runs),
@@ -262,6 +275,7 @@ def _get_analysis(db: Session, analysis_id: str) -> Analysis:
 
 def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
     market_quote = max(analysis.market_quotes, key=lambda quote: quote.retrieved_at, default=None)
+    article_metadata = {join.article_id: join for join in analysis.analysis_articles}
 
     return AnalysisResponse(
         id=analysis.id,
@@ -281,6 +295,20 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
                 "content_hash": article.content_hash,
                 "word_count": article.word_count,
                 "raw_artifact_path": article.raw_artifact_path,
+                "relevance_score": _decimal_to_str(
+                    article_metadata[article.id].relevance_score
+                )
+                if article.id in article_metadata
+                else None,
+                "duplicate_group_id": article_metadata[article.id].duplicate_group_id
+                if article.id in article_metadata
+                else None,
+                "included_in_forecast": article_metadata[article.id].included_in_forecast
+                if article.id in article_metadata
+                else True,
+                "exclusion_reason": article_metadata[article.id].exclusion_reason
+                if article.id in article_metadata
+                else None,
             }
             for article in analysis.articles
         ],
@@ -422,18 +450,18 @@ def _float_to_decimal(value: float | None) -> Decimal | None:
 
 def _build_sentiment_aggregate(
     analysis_id: str,
-    labels: list[str],
-    scores: list[Decimal],
+    article_count: int,
+    included_labels: list[str],
+    included_scores: list[Decimal],
     included_article_count: int,
 ) -> SentimentAggregate:
-    article_count = len(labels)
-    positive_count = labels.count("positive")
-    neutral_count = labels.count("neutral")
-    negative_count = labels.count("negative")
-    mixed_count = labels.count("mixed")
-    aggregate_score = sum(scores, Decimal("0")) / Decimal(max(len(scores), 1))
+    positive_count = included_labels.count("positive")
+    neutral_count = included_labels.count("neutral")
+    negative_count = included_labels.count("negative")
+    mixed_count = included_labels.count("mixed")
+    aggregate_score = sum(included_scores, Decimal("0")) / Decimal(max(len(included_scores), 1))
     dominant_count = max(positive_count, neutral_count, negative_count, mixed_count, 0)
-    agreement_score = Decimal(str(dominant_count / max(article_count, 1)))
+    agreement_score = Decimal(str(dominant_count / max(included_article_count, 1)))
     evidence_strength_score = min(
         Decimal("1"),
         Decimal(str(included_article_count)) / Decimal("3"),
