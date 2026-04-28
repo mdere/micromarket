@@ -24,6 +24,7 @@ The product is research-only decision support. It should not issue direct buy/se
 - Model evaluation plan: `micromarket/docs/11-model-evaluation-plan.md`
 - Implementation roadmap: `micromarket/docs/12-implementation-roadmap.md`
 - Model quality plan: `micromarket/docs/13-model-quality-plan.md`
+- Ticker context ingestion plan: `micromarket/docs/14-ticker-context-ingestion-plan.md`
 
 ## Approval State
 
@@ -115,14 +116,19 @@ The product is research-only decision support. It should not issue direct buy/se
   - Ticker article history visually marks reused articles across multiple runs.
 - Model-quality direction has been reevaluated:
   - `docs/13-model-quality-plan.md` is the next planning source for sentiment/model work.
-  - Next major work should shift from UI mechanics to sentiment quality, model evaluation, and provider experimentation.
-  - Recommended path is to strengthen the deterministic sentiment baseline first, then add an optional Ollama-backed sentiment provider behind the existing provider interface.
+  - Next major work should shift from UI mechanics to data/model foundation, model evaluation, and provider experimentation.
+  - Recommended path is to build ticker context and as-of-time alignment first, then strengthen the deterministic sentiment baseline, then add an optional Ollama-backed sentiment provider behind the existing provider interface.
   - Google Colab and Databricks-style environments are acceptable for exploratory experiments only; production runtime should remain local-first.
 - Historical time-alignment decision added:
   - Every analysis should resolve an `analysis_as_of` timestamp.
   - Live runs can use current analysis time; historical replay and training runs should use article `published_at` or an explicit historical timestamp.
   - Market feature lookbacks should end at `analysis_as_of`, forecast target windows should start at `analysis_as_of`, and outcomes should measure prices after the target horizon.
   - This is required before trusting sentiment/model-quality evaluation because it prevents lookahead bias.
+- Ticker context ingestion decision added:
+  - New tickers should trigger or reuse a configurable market-history backfill, such as 30 days.
+  - Article ingestion should extract related companies, partners, suppliers, customers, competitors, products, themes, and keywords.
+  - Related entities should preserve aliases and evidence snippets, for example normalizing `TSMC`, `Taiwan Semiconductor`, and `TSM`.
+  - This foundation should be implemented before expanding sentiment fixtures or optional Ollama providers.
 
 ## Decisions From Questionnaire
 
@@ -268,7 +274,8 @@ The current work is implementing the first backend vertical slice:
 17. Evidence grouping/filtering and article-history reuse markers are implemented.
 18. Model-quality plan is documented.
 19. Historical as-of-time alignment is documented as the next architecture correction.
-20. Next: commit the documentation updates, then implement as-of-time aligned historical replay before expanding sentiment provider complexity.
+20. Ticker context ingestion plan is documented.
+21. Next: implement ticker onboarding, market-history backfill, related-entity extraction, and as-of-time aligned historical replay before expanding sentiment provider complexity.
 
 ## Suggested Recommendation To Explore Next
 
@@ -285,8 +292,8 @@ The current recommended architecture is:
 - Also store next-close and 7-trading-day forecasts for later evaluation.
 - Start market data with `yfinance` behind a provider interface.
 - Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
-- Start model-quality work by fixing time alignment first: add `analysis_as_of`, historical market lookbacks, and forecast target windows that start from the simulated decision point.
-- After time alignment is in place, improve deterministic sentiment fixtures and confidence/driver extraction, then add an optional Ollama sentiment provider behind `SentimentProvider`.
+- Start model-quality foundation work by adding ticker context first: market-history backfill, `analysis_as_of`, historical market lookbacks, forecast target windows, and related-entity extraction.
+- After that foundation is in place, improve deterministic sentiment fixtures and confidence/driver extraction, then add an optional Ollama sentiment provider behind `SentimentProvider`.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -312,7 +319,10 @@ When resuming:
 11. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
 13. Read `docs/13-model-quality-plan.md`.
-14. Implement analysis `analysis_as_of` semantics and historical market lookback alignment.
-15. Add curated sentiment fixtures and improve the deterministic baseline provider.
-16. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
-17. Keep the UI and model outputs research-only and avoid buy/sell/hold language.
+14. Read `docs/14-ticker-context-ingestion-plan.md`.
+15. Implement ticker onboarding and configurable market-history backfill.
+16. Implement related-entity and narrative keyword extraction.
+17. Implement analysis `analysis_as_of` semantics and historical market lookback alignment.
+18. Add curated sentiment fixtures and improve the deterministic baseline provider.
+19. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
+20. Keep the UI and model outputs research-only and avoid buy/sell/hold language.

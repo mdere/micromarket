@@ -6,7 +6,7 @@ Build a local-first end-to-end system that accepts a ticker and article evidence
 
 The MVP should keep analysis execution one ticker at a time while organizing history by ticker. A ticker acts as the durable research workspace for repeated runs, articles, evidence decisions, forecasts, sentiment, limitations, and later evaluation outcomes.
 
-Historical model quality depends on time alignment. Analyses should resolve an `analysis_as_of` timestamp, and all article evidence, market features, forecast targets, and outcomes should be computed relative to that timestamp to avoid lookahead bias.
+Historical model quality depends on ticker context and time alignment. Analyses should resolve an `analysis_as_of` timestamp, and all article evidence, market features, forecast targets, and outcomes should be computed relative to that timestamp to avoid lookahead bias. New tickers should also have local market-history context and related-entity extraction before model quality is judged.
 
 ## Phase 0: Project Setup
 
@@ -39,6 +39,9 @@ Deliverables:
   - assets,
   - analyses,
   - articles,
+  - market price history,
+  - ticker contexts,
+  - entities and article entities,
   - sentiment runs,
   - forecast runs,
   - forecast outcomes.
@@ -86,6 +89,7 @@ Acceptance criteria:
 - User can submit a URL and store extracted text.
 - Raw/extracted artifacts are saved locally.
 - Article metadata is persisted in PostgreSQL.
+- Article-related entities and narrative keywords can be extracted and persisted through a stable contract.
 
 ## Phase 3: Market Data Provider
 
@@ -95,6 +99,7 @@ Deliverables:
 - `yfinance` implementation.
 - Quote/history retrieval.
 - Historical lookback retrieval ending at an analysis as-of timestamp.
+- Market history backfill for new ticker contexts.
 - Asset lookup for US equities and ETFs.
 - Market quote persistence.
 
@@ -103,8 +108,28 @@ Acceptance criteria:
 - API retrieves quote and recent history for a common stock.
 - API retrieves data for a common ETF.
 - API can retrieve historical lookback data for a ticker without using prices after the requested as-of timestamp.
+- API can backfill a configurable market-history window, such as 30 days, when a ticker is first analyzed.
 - Provider errors return clear failure messages.
 - Provider-specific objects do not leak across the app.
+
+## Phase 3.5: Ticker Context And Entity Graph
+
+Deliverables:
+
+- Ticker context onboarding service.
+- Configurable market-history lookback days.
+- `market_price_history` persistence.
+- Deterministic related-entity extraction.
+- Alias normalization for companies and tickers.
+- Article-to-entity relationship persistence.
+- Asset-to-related-entity relationship persistence.
+
+Acceptance criteria:
+
+- Adding a ticker such as `AMD` stores or refreshes recent market history.
+- An `NVDA` article mentioning `TSMC` or `Samsung` can persist those related entities.
+- Entity extraction preserves provider/model version lineage.
+- Tests use fake providers and deterministic extraction fixtures.
 
 ## Phase 4: Sentiment Pipeline
 
@@ -236,9 +261,11 @@ Only after this works should the UI and URL ingestion expand.
 10. URL ingestion.
 11. Evaluation refresh.
 12. Ticker-centered analysis history.
-13. Analysis as-of time and historical market lookback alignment.
-14. Sentiment fixture set and improved baseline sentiment.
-15. Optional Ollama sentiment provider.
+13. Ticker context onboarding and market-history backfill.
+14. Related-entity and narrative keyword extraction.
+15. Analysis as-of time and historical market lookback alignment.
+16. Sentiment fixture set and improved baseline sentiment.
+17. Optional Ollama sentiment provider.
 
 ## Risks
 
@@ -247,6 +274,8 @@ Only after this works should the UI and URL ingestion expand.
 Mitigation:
 
 - Store all runs.
+- Build ticker market-history context before evaluating article impact.
+- Extract related entities and narrative keywords so sentiment can be grouped by theme, partner, supplier, customer, or competitor.
 - Compare to baselines.
 - Treat early forecasts as experiments.
 - Use notebooks to inspect failures, tune baseline parameters, and validate confidence calibration before promoting changes into API code.
@@ -262,6 +291,15 @@ Mitigation:
 - Derive historical runs from article `published_at` or an explicit historical timestamp.
 - Fetch market lookback windows ending at `analysis_as_of`.
 - Reject or flag articles whose publish time is after the analysis as-of time.
+
+### Related Entity Signal Is Noisy
+
+Mitigation:
+
+- Start deterministic with alias dictionaries and exact matches.
+- Store confidence and evidence snippets for every extracted entity.
+- Treat relationships as research context until evaluated.
+- Normalize common aliases such as `TSMC`, `Taiwan Semiconductor`, and `TSM`.
 
 ### LLM Output Is Unstable
 
@@ -303,6 +341,8 @@ MVP is done when:
 - Local app runs end-to-end.
 - User can analyze one ticker with manual text and pasted URL evidence.
 - User can revisit prior analyses grouped by ticker.
+- New ticker onboarding stores recent market history for repeatable context.
+- Articles can preserve related company, product, partner, supplier, customer, competitor, and keyword relationships.
 - System produces sentiment, forecast, confidence, and limitations.
 - Sentiment provider quality is measured against curated fixtures.
 - Forecast records are stored with model version and horizon.

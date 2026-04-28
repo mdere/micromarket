@@ -6,9 +6,11 @@ The MVP model should not only generate forecasts. It should make forecasts that 
 
 The evaluation goal is to learn whether article sentiment contributes useful signal beyond naive assumptions.
 
-The next model-quality goal is to improve sentiment first. Better sentiment labels, driver extraction, evidence snippets, and confidence calibration should be measured before adding more forecast complexity.
+The next model-quality goal is to improve the data foundation first, then sentiment. Ticker market-history context, as-of-time alignment, and related-entity extraction should be in place before judging sentiment or forecast model quality.
 
 See `docs/13-model-quality-plan.md` for the provider progression from deterministic baseline to optional Ollama/local LLM sentiment.
+
+See `docs/14-ticker-context-ingestion-plan.md` for ticker onboarding, market-history backfill, and related-entity extraction.
 
 ## As-Of Time And Lookahead Bias
 
@@ -148,6 +150,18 @@ Signals:
 - sentiment agreement,
 - source diversity,
 - recency.
+
+### Related Entity Signal
+
+Measures whether articles mentioning related companies, products, partners, suppliers, customers, competitors, or themes have useful explanatory value for the primary ticker.
+
+Use for:
+
+- entity mention counts,
+- entity sentiment by article,
+- related-entity agreement or conflict,
+- supplier/customer/competitor relationship type,
+- price movement after articles involving the same entity or narrative.
 
 ### Sentiment Fixture Quality
 

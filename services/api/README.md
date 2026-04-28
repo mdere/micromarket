@@ -343,7 +343,15 @@ historical replay. A historical article published on `2026-03-05` should be
 analyzed with market features available around `2026-03-05`, with forecast
 targets starting from that date, even if the article is ingested later.
 
-Ollama is the preferred first local LLM experiment once the fixture set exists.
+The same foundation should backfill ticker context. When a new ticker is first
+analyzed, the API should store a configurable historical market window, such as
+30 days, and preserve related entities extracted from articles. For example, an
+`NVDA` article mentioning `TSMC`, `Samsung`, or `HBM` should keep those
+relationships so later analyses can compare related narratives with market
+movement.
+
+Ollama is the preferred first local LLM experiment once ticker context,
+as-of-time alignment, and the sentiment fixture set exist.
 It should be added as an optional `OllamaSentimentProvider`, selected by
 configuration such as `SENTIMENT_PROVIDER=ollama`, and accessed through the same
 provider boundary. Tests should use fake responses and must not require Ollama,

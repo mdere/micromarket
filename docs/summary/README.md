@@ -15,3 +15,5 @@ Please read micromarket/docs/summary/current-state.md and continue from the "Nex
 ```
 
 For sentiment or model-quality work, also read `micromarket/docs/13-model-quality-plan.md`.
+
+For ticker onboarding, market-history backfill, or entity extraction work, also read `micromarket/docs/14-ticker-context-ingestion-plan.md`.

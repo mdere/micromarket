@@ -10,7 +10,8 @@ Before making changes, read these files in order:
 2. `docs/summary/operating-guide.md`
 3. `docs/12-implementation-roadmap.md`
 4. `docs/13-model-quality-plan.md` when working on sentiment/model quality
-5. Relevant source files for the task
+5. `docs/14-ticker-context-ingestion-plan.md` when working on ticker onboarding, market history, or entity extraction
+6. Relevant source files for the task
 
 Then validate the repository state against recent commits:
 
@@ -35,6 +36,7 @@ Please start by reading:
 2. docs/summary/operating-guide.md
 3. docs/12-implementation-roadmap.md
 4. docs/13-model-quality-plan.md when working on sentiment/model quality
+5. docs/14-ticker-context-ingestion-plan.md when working on ticker onboarding, market history, or entity extraction
 
 Then run or inspect:
 
@@ -85,5 +87,6 @@ As of the latest handoff, the backend vertical slice has:
 - panel-level loading states and failed-analysis detail,
 - selected-run evidence filtering and article-history reuse markers.
 - model-quality planning for stronger sentiment baselines and optional local LLM providers.
+- ticker-context planning for market-history backfill and related-entity extraction.
 
-The next major step is model-quality foundation work: implement analysis as-of time, historical market lookback alignment, and forecast target windows before expanding sentiment fixtures or optional Ollama-backed sentiment providers.
+The next major step is foundation work before model building: implement ticker onboarding, historical market backfill, analysis as-of time, forecast target windows, and related-entity extraction before expanding sentiment fixtures or optional Ollama-backed sentiment providers.

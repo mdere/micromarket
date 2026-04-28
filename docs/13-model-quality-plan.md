@@ -6,7 +6,9 @@ Move from a deterministic lexical sentiment baseline toward measured, evidence-b
 
 The first modeling milestone is better article sentiment. Forecast improvements should come after sentiment quality, evidence extraction, and confidence calibration are measurable.
 
-Before model quality can be trusted, every run must be time-aligned. Historical articles should be evaluated as if the system were standing at the article's publication time, not the later ingestion time.
+Before model quality can be trusted, every run must be time-aligned and backed by stable ticker context. Historical articles should be evaluated as if the system were standing at the article's publication time, not the later ingestion time.
+
+See `docs/14-ticker-context-ingestion-plan.md` for the prerequisite ticker onboarding, market-history backfill, and related-entity extraction foundation.
 
 ## Current Baseline
 
@@ -57,15 +59,17 @@ This rule prevents lookahead bias. A model should never receive market movement,
 
 ## Recommended Model Progression
 
-### Stage 0: Add Time-Aligned Historical Replay
+### Stage 0: Add Ticker Context And Time-Aligned Historical Replay
 
 Add the data and service semantics needed to run analyses against historical article dates before expanding model complexity.
 
 Acceptance criteria:
 
+- New tickers can trigger a configurable market-history backfill, such as 30 days.
 - Analysis records store an `analysis_as_of` timestamp and source, such as `live`, `article_published_at`, or `manual_historical`.
 - Market data provider interfaces can fetch historical lookback windows ending at `analysis_as_of`.
 - Forecast runs store feature-window start/end timestamps and target-window start/end timestamps.
+- Articles can store extracted related entities and keywords for later narrative analysis.
 - Tests cover a historical article dated before the ingestion date and verify the forecast target starts from the historical date.
 
 ### Stage 1: Strengthen The Baseline
@@ -175,11 +179,13 @@ Provider selection should happen in `app/sentiment/dependencies.py`.
 
 ## First Implementation Slice
 
-1. Add curated sentiment fixture data under `services/api/tests/fixtures` or `data/samples`.
-2. Improve `BaselineSentimentProvider` to produce better drivers, mixed labels, and confidence.
-3. Add tests for the curated examples.
-4. Update model version strings.
-5. Add notebook cells for comparing baseline output against fixtures.
+1. Add ticker market-history backfill and `analysis_as_of` semantics.
+2. Add related-entity extraction and article/entity lineage.
+3. Add curated sentiment fixture data under `services/api/tests/fixtures` or `data/samples`.
+4. Improve `BaselineSentimentProvider` to produce better drivers, mixed labels, and confidence.
+5. Add tests for the curated examples.
+6. Update model version strings.
+7. Add notebook cells for comparing baseline output against fixtures.
 
 ## Second Implementation Slice
 

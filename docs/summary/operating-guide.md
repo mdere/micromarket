@@ -14,9 +14,11 @@ The highest-risk work is data/model quality, lineage, explainability, and evalua
 
 The current UI/product direction is ticker-centered history: the MVP still runs one user-triggered analysis at a time, but repeated analyses for the same symbol should be grouped under that ticker so the user can revisit all related article evidence, forecasts, sentiment, limitations, and later evaluation outcomes.
 
-The current model direction is model-quality improvement. Start with stronger deterministic sentiment fixtures and baseline scoring, then add optional local LLM sentiment through Ollama behind the existing `SentimentProvider` interface. Hosted tools such as Google Colab or Databricks may be used for exploratory experiments only; they must not become production runtime dependencies.
+The current model direction is foundation-first model-quality improvement. Start with ticker context, market-history backfill, related-entity extraction, and historical time alignment. Then improve deterministic sentiment fixtures and baseline scoring, then add optional local LLM sentiment through Ollama behind the existing `SentimentProvider` interface. Hosted tools such as Google Colab or Databricks may be used for exploratory experiments only; they must not become production runtime dependencies.
 
-Before sentiment/model improvements are judged, historical analyses must be time-aligned. Every run should have an `analysis_as_of` timestamp, and historical replay should use only article evidence and market data available at or before that timestamp.
+Before sentiment/model improvements are judged, ticker context and historical alignment must be in place. Every new ticker should have configurable market-history backfill, every run should have an `analysis_as_of` timestamp, and historical replay should use only article evidence and market data available at or before that timestamp.
+
+Article ingestion should also preserve related companies, products, partners, suppliers, customers, competitors, and narrative keywords. Treat these relationships as research context until enough outcomes exist to evaluate them.
 
 ## Session Start Protocol
 
@@ -109,6 +111,8 @@ Frontend validation should be added once active UI work resumes.
 - Treat early forecasts as experiments until evaluation proves signal.
 - Promote stable notebook logic into tested backend modules before the API depends on it.
 - Prevent lookahead bias by aligning article publish time, market lookbacks, forecast targets, and outcomes to each run's `analysis_as_of` timestamp.
+- Backfill market history for new tickers before evaluating article impact.
+- Preserve related-entity and keyword lineage for each article.
 - Improve sentiment quality with measured fixtures before relying on prompt/model intuition.
 - Keep Ollama and hosted notebook experiments optional and configurable.
 
@@ -143,6 +147,7 @@ Update docs when behavior or decisions change:
 - `notebooks/README.md` for notebook workflow changes.
 - `docs/summary/current-state.md` for current implementation state and next recommended work.
 - `docs/13-model-quality-plan.md` for sentiment/model-quality plans and provider progression.
+- `docs/14-ticker-context-ingestion-plan.md` for ticker onboarding, market-history backfill, and entity extraction.
 - Architecture/roadmap docs when decisions change, not for every small implementation detail.
 
 ## Current Build Direction
@@ -166,7 +171,8 @@ Continue the first backend vertical slice:
 15. Evidence grouping/filtering and article-history reuse markers: done.
 16. Model-quality plan and sentiment provider direction: documented.
 17. Analysis as-of time and historical replay direction: documented.
-18. Next: implement as-of-time aligned historical replay before expanding sentiment provider complexity.
+18. Ticker context ingestion direction: documented.
+19. Next: implement ticker onboarding, market-history backfill, related-entity extraction, and as-of-time alignment before expanding sentiment provider complexity.
 
 ## Escalation Triggers
 

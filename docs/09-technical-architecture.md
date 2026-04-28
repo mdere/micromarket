@@ -20,6 +20,8 @@ Ollama may be used as a local external model runtime for sentiment experiments. 
 
 Historical analysis must be as-of-time aligned. The backend should resolve an `analysis_as_of` timestamp for every run and compute article eligibility, market lookbacks, forecast targets, and outcomes relative to that timestamp.
 
+Ticker onboarding should create reusable market and entity context. When a new ticker is analyzed, the backend should backfill a configurable market-history window and extract related entities from articles so later model work can evaluate sentiment by company, partner, supplier, competitor, product, and narrative.
+
 ## System Shape
 
 ```text
@@ -28,6 +30,8 @@ User
       -> FastAPI backend
           -> article ingestion
           -> URL extraction
+          -> ticker context backfill
+          -> entity extraction
           -> sentiment scoring
           -> forecast scoring
           -> evaluation refresh
@@ -103,6 +107,8 @@ Responsibilities:
 - Resolve live or historical analysis as-of time.
 - Manage analysis workflow.
 - Run article text ingestion and URL extraction.
+- Build ticker context and market-history backfills.
+- Extract related companies, products, themes, and keywords from article evidence.
 - Fetch market data through provider interfaces.
 - Run sentiment pipeline.
 - Select sentiment providers through configuration.
@@ -178,6 +184,22 @@ Structured database rows should point to artifact paths rather than storing larg
 5. Evaluation later compares the stored forecast to actual prices after the target window.
 
 This flow is required for model training and backtesting so the system does not learn from future prices or future article evidence.
+
+### Ticker Context Onboarding
+
+1. User analyzes or selects a ticker that does not have sufficient local context.
+2. FastAPI creates or refreshes the ticker context.
+3. FastAPI fetches a configurable market-history window, such as 30 days.
+4. FastAPI stores normalized price history with provider lineage.
+5. Future analyses reuse stored history when the required window is already present.
+
+### Related Entity Extraction
+
+1. FastAPI receives article text or extracted URL content.
+2. Entity extraction identifies related companies, tickers, products, sectors, partners, suppliers, customers, competitors, and narrative keywords.
+3. Entity aliases are normalized, for example `TSMC`, `Taiwan Semiconductor`, and `TSM`.
+4. Article-to-entity links are stored with confidence, snippets, provider, and model version.
+5. The forecast and evaluation layers can later inspect whether related-entity narratives correlate with primary ticker movement.
 
 ### Data Science Workflow
 
@@ -284,6 +306,24 @@ Interface should support:
 - `normalize_article_text(raw_text)`
 - `detect_language(text)`
 - `estimate_readability(text)`
+
+### Entity Extraction Provider
+
+Initial implementation should be deterministic.
+
+Interface should support:
+
+- `extract_entities(article_text, ticker_context)`
+- `normalize_entity_alias(entity_name)`
+
+Output must include:
+
+- entity name,
+- entity type,
+- optional ticker symbol,
+- confidence,
+- evidence snippets,
+- provider/model version.
 
 ### Sentiment Provider
 

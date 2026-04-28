@@ -53,14 +53,17 @@ Initial users are individual investors and AIML builders who can tolerate beta-q
 ### Phase 2: Data Ingestion
 
 - Implement ticker validation.
+- Implement ticker onboarding with configurable market-history backfill.
 - Implement market metric fetch.
 - Implement article fetch and normalization.
+- Implement deterministic related-entity and keyword extraction.
 - Store raw article metadata.
 
 ### Phase 3: Sentiment and Forecasting
 
 - Add article relevance score.
 - Add analysis as-of time so historical articles are evaluated against market data available at the article date.
+- Use ticker context and related-entity lineage as inputs before judging sentiment/forecast quality.
 - Add curated sentiment fixtures and improve the baseline sentiment classifier.
 - Add optional Ollama/local LLM sentiment provider only after the baseline has measurable fixtures.
 - Aggregate ticker sentiment.

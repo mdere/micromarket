@@ -9,6 +9,7 @@ The data model must preserve enough lineage to answer:
 - What forecast model produced the forecast?
 - What market data was available at forecast time?
 - What timestamp did the analysis simulate or represent?
+- What related entities, companies, products, or themes appeared in the article?
 - What happened later?
 - Did the model beat a naive baseline?
 
@@ -60,6 +61,51 @@ Fields:
 - `quote_time`
 - `retrieved_at`
 - `raw_payload_artifact_path`
+
+## `market_price_history`
+
+Stores historical market prices used for lookback features, historical replay, and outcome evaluation.
+
+Fields:
+
+- `id`
+- `asset_id`
+- `provider`
+- `price_date`
+- `open`
+- `high`
+- `low`
+- `close`
+- `adjusted_close`
+- `volume`
+- `retrieved_at`
+- `raw_payload_artifact_path`
+
+Notes:
+
+- Price history supports configurable ticker onboarding lookbacks, such as 30 days.
+- Historical feature windows should read from this table when possible before making new provider calls.
+
+## `ticker_contexts`
+
+Stores local context and backfill state for a ticker workspace.
+
+Fields:
+
+- `id`
+- `asset_id`
+- `lookback_days`
+- `history_start_date`
+- `history_end_date`
+- `provider`
+- `last_backfilled_at`
+- `created_at`
+- `updated_at`
+
+Notes:
+
+- A ticker context is created or refreshed when a ticker is first analyzed or when history is missing for a requested `analysis_as_of`.
+- The context should not replace analysis-level lineage; it provides reusable market context for repeated runs.
 
 ## `analyses`
 
@@ -132,6 +178,52 @@ Notes:
 
 - This table is the source of truth for which articles participated in which analysis runs.
 - Ticker history views should use this relationship to show repeated article usage, duplicate handling, relevance decisions, and excluded evidence across runs for the same asset.
+
+## `entities`
+
+Stores normalized companies, tickers, products, sectors, themes, and keywords extracted from article evidence.
+
+Fields:
+
+- `id`
+- `entity_type`: `asset`, `company`, `product`, `theme`, `sector`, `keyword`
+- `name`
+- `symbol`
+- `canonical_name`
+- `aliases`
+- `created_at`
+- `updated_at`
+
+## `article_entities`
+
+Links article evidence to extracted entities.
+
+Fields:
+
+- `id`
+- `article_id`
+- `entity_id`
+- `provider`
+- `model_name`
+- `model_version`
+- `confidence_score`
+- `evidence_snippets`
+- `created_at`
+
+## `asset_relationships`
+
+Stores known or inferred relationships between the primary ticker and related entities.
+
+Fields:
+
+- `id`
+- `asset_id`
+- `related_entity_id`
+- `relationship_type`: `supplier`, `customer`, `partner`, `competitor`, `product_exposure`, `sector_peer`, `mentioned_with`
+- `source`: `manual_seed`, `article_extraction`, `provider`
+- `confidence_score`
+- `created_at`
+- `updated_at`
 
 ## `sentiment_runs`
 
@@ -280,9 +372,14 @@ Fields:
 ```text
 assets
   -> market_quotes
+  -> market_price_history
+  -> ticker_contexts
+  -> asset_relationships
   -> analyses
       -> analysis_articles
           -> articles
+              -> article_entities
+                  -> entities
               -> sentiment_runs
       -> sentiment_aggregates
       -> forecast_runs

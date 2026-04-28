@@ -4,9 +4,11 @@ This workspace is for exploratory data science during the MVP. It is not part of
 
 Use notebooks to inspect data quality, tune baseline parameters, explore model behavior, and create reports. When a finding becomes part of the product, move the stable logic into tested modules under `services/api/app`.
 
-The next model-quality workflow is sentiment-first: compare the deterministic baseline against curated fixtures, then optionally compare local LLM output from Ollama or hosted notebook experiments.
+The next model-quality workflow is foundation-first: inspect ticker market-history context, related-entity extraction, and historical time alignment before comparing sentiment providers.
 
 Historical experiments must be time-aligned. When reviewing an article from a past date, derive the analysis as-of timestamp from the article publish time or an explicit historical timestamp, use market lookbacks ending at that timestamp, and evaluate forecast targets after that timestamp.
+
+Ticker context experiments should come before model experiments. Use notebooks to inspect market-history backfills, missing price windows, related-entity extraction, and whether article narratives involving suppliers, customers, partners, competitors, products, or themes line up with later market movement.
 
 ## Setup
 
@@ -39,6 +41,7 @@ Recommended next notebooks or notebook sections:
 
 - sentiment fixture review: inspect hand-labeled examples and provider outputs,
 - historical replay review: compare article publish dates, analysis as-of timestamps, market lookback windows, and target windows,
+- ticker context review: inspect market-history coverage and extracted related entities for a ticker,
 - baseline-vs-Ollama comparison: compare labels, scores, drivers, snippets, and confidence,
 - hosted experiment export: run the same fixture comparison in Colab or Databricks if local compute is too slow.
 
