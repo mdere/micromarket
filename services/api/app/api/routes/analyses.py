@@ -10,7 +10,10 @@ from app.db.models import (
     Analysis,
     AnalysisArticle,
     Article,
+    ArticleEntity,
     Asset,
+    AssetRelationship,
+    Entity,
     ForecastRun,
     MarketQuote,
     SentimentAggregate,
@@ -21,6 +24,7 @@ from app.db.session import get_db
 from app.forecasting.dependencies import get_forecast_provider
 from app.forecasting.provider import ForecastInput, ForecastProvider
 from app.ingestion.dependencies import get_url_extraction_provider
+from app.ingestion.entities import DeterministicEntityExtractor, ExtractedEntity
 from app.ingestion.evidence import ArticleEvidencePolicy
 from app.ingestion.service import ArticleIngestionService, NormalizedArticle
 from app.ingestion.url_provider import URLExtractionError, URLExtractionProvider
@@ -140,6 +144,7 @@ def create_analysis(
     ingestion = ArticleIngestionService()
     artifacts = ArtifactStore(settings.artifact_root)
     evidence_policy = ArticleEvidencePolicy()
+    entity_extractor = DeterministicEntityExtractor()
     seen_hashes: set[str] = set()
     included_sentiment_labels: list[str] = []
     included_sentiment_scores: list[Decimal] = []
@@ -178,6 +183,15 @@ def create_analysis(
         )
         db.add(article)
         db.flush()
+
+        extracted_entities = entity_extractor.extract(normalized.text, ticker)
+        _persist_article_entities(
+            db=db,
+            asset=asset,
+            article=article,
+            extracted_entities=extracted_entities,
+        )
+
         evidence_decision = evidence_policy.decide(normalized, ticker, seen_hashes)
         seen_hashes.add(normalized.content_hash)
         db.add(
@@ -287,6 +301,12 @@ def list_analyses(
     query = (
         select(Analysis)
         .options(selectinload(Analysis.asset), selectinload(Analysis.articles))
+        .options(selectinload(Analysis.asset).selectinload(Asset.asset_relationships))
+        .options(
+            selectinload(Analysis.articles)
+            .selectinload(Article.article_entities)
+            .selectinload(ArticleEntity.entity)
+        )
         .options(selectinload(Analysis.market_quotes))
         .options(selectinload(Analysis.analysis_articles))
         .options(selectinload(Analysis.sentiment_runs))
@@ -309,8 +329,10 @@ def _get_analysis(db: Session, analysis_id: str) -> Analysis:
         select(Analysis)
         .where(Analysis.id == analysis_id)
         .options(
-            selectinload(Analysis.asset),
-            selectinload(Analysis.articles),
+            selectinload(Analysis.asset).selectinload(Asset.asset_relationships),
+            selectinload(Analysis.articles)
+            .selectinload(Article.article_entities)
+            .selectinload(ArticleEntity.entity),
             selectinload(Analysis.market_quotes),
             selectinload(Analysis.analysis_articles),
             selectinload(Analysis.sentiment_runs),
@@ -326,6 +348,7 @@ def _get_analysis(db: Session, analysis_id: str) -> Analysis:
 def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
     market_quote = max(analysis.market_quotes, key=lambda quote: quote.retrieved_at, default=None)
     article_metadata = {join.article_id: join for join in analysis.analysis_articles}
+    article_relationships = _article_relationships(analysis)
 
     return AnalysisResponse(
         id=analysis.id,
@@ -365,6 +388,24 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
                 "exclusion_reason": article_metadata[article.id].exclusion_reason
                 if article.id in article_metadata
                 else None,
+                "entities": [
+                    {
+                        "id": link.entity.id,
+                        "entity_type": link.entity.entity_type,
+                        "name": link.entity.name,
+                        "symbol": link.entity.symbol,
+                        "canonical_name": link.entity.canonical_name,
+                        "relationship_type": article_relationships.get(
+                            (article.id, link.entity_id), "mentioned_with"
+                        ),
+                        "confidence_score": _decimal_to_str(link.confidence_score) or "0",
+                        "evidence_snippets": link.evidence_snippets or [],
+                        "provider": link.provider,
+                        "model_name": link.model_name,
+                        "model_version": link.model_version,
+                    }
+                    for link in article.article_entities
+                ],
             }
             for article in analysis.articles
         ],
@@ -503,6 +544,94 @@ def _resolve_analysis_as_of(
     if published_dates:
         return max(published_dates), "article_published_at"
     return utc_now(), "live"
+
+
+def _persist_article_entities(
+    db: Session,
+    asset: Asset,
+    article: Article,
+    extracted_entities: list[ExtractedEntity],
+) -> None:
+    for extracted in extracted_entities:
+        entity = _get_or_create_entity(db, extracted)
+        db.flush()
+        article_link = db.scalar(
+            select(ArticleEntity)
+            .where(ArticleEntity.article_id == article.id)
+            .where(ArticleEntity.entity_id == entity.id)
+            .where(ArticleEntity.provider == extracted.provider)
+        )
+        if article_link is None:
+            db.add(
+                ArticleEntity(
+                    article_id=article.id,
+                    entity_id=entity.id,
+                    provider=extracted.provider,
+                    model_name=extracted.model_name,
+                    model_version=extracted.model_version,
+                    confidence_score=Decimal(str(extracted.confidence)),
+                    evidence_snippets=extracted.evidence_snippets,
+                )
+            )
+
+        relationship = db.scalar(
+            select(AssetRelationship)
+            .where(AssetRelationship.asset_id == asset.id)
+            .where(AssetRelationship.related_entity_id == entity.id)
+            .where(AssetRelationship.relationship_type == extracted.relationship_type)
+        )
+        if relationship is None:
+            db.add(
+                AssetRelationship(
+                    asset_id=asset.id,
+                    related_entity_id=entity.id,
+                    relationship_type=extracted.relationship_type,
+                    source="article_extraction",
+                    confidence_score=Decimal(str(extracted.confidence)),
+                )
+            )
+        else:
+            relationship.confidence_score = max(
+                relationship.confidence_score,
+                Decimal(str(extracted.confidence)),
+            )
+
+
+def _get_or_create_entity(db: Session, extracted: ExtractedEntity) -> Entity:
+    entity = db.scalar(
+        select(Entity)
+        .where(Entity.entity_type == extracted.entity_type)
+        .where(Entity.canonical_name == extracted.canonical_name)
+    )
+    if entity is not None:
+        aliases = sorted(set((entity.aliases or []) + extracted.aliases))
+        entity.aliases = aliases
+        if entity.symbol is None and extracted.symbol is not None:
+            entity.symbol = extracted.symbol
+        return entity
+    entity = Entity(
+        entity_type=extracted.entity_type,
+        name=extracted.name,
+        symbol=extracted.symbol,
+        canonical_name=extracted.canonical_name,
+        aliases=sorted(set(extracted.aliases)),
+    )
+    db.add(entity)
+    return entity
+
+
+def _article_relationships(analysis: Analysis) -> dict[tuple[str, str], str]:
+    relationships = {
+        relationship.related_entity_id: relationship.relationship_type
+        for relationship in analysis.asset.asset_relationships
+    }
+    article_relationships: dict[tuple[str, str], str] = {}
+    for article in analysis.articles:
+        for link in article.article_entities:
+            article_relationships[(article.id, link.entity_id)] = relationships.get(
+                link.entity_id, "mentioned_with"
+            )
+    return article_relationships
 
 
 def _ensure_utc(value: datetime) -> datetime:

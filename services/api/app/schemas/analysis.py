@@ -18,6 +18,20 @@ class AnalysisCreate(BaseModel):
     articles: list[ArticleInput] = Field(default_factory=list)
 
 
+class ArticleEntityResponse(BaseModel):
+    id: str
+    entity_type: str
+    name: str
+    symbol: str | None = None
+    canonical_name: str
+    relationship_type: str
+    confidence_score: str
+    evidence_snippets: list[str] = Field(default_factory=list)
+    provider: str
+    model_name: str
+    model_version: str
+
+
 class ArticleResponse(BaseModel):
     id: str
     title: str | None
@@ -32,6 +46,7 @@ class ArticleResponse(BaseModel):
     duplicate_group_id: str | None = None
     included_in_forecast: bool = True
     exclusion_reason: str | None = None
+    entities: list[ArticleEntityResponse] = Field(default_factory=list)
 
 
 class MarketQuoteResponse(BaseModel):

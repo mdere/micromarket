@@ -357,6 +357,14 @@ feature-window metadata in forecast responses. If an article provides
 `published_at`, that timestamp becomes the historical decision point unless the
 request explicitly sets `analysis_as_of`.
 
+Article ingestion also performs deterministic related-entity extraction. The
+first pass uses an alias/theme dictionary and stores matches in `entities`,
+`article_entities`, and `asset_relationships`. Article responses include
+relationship type, confidence, evidence snippets, and provider/model lineage.
+For example, an `NVDA` article mentioning `TSMC`, `Samsung`, `HBM`, or foundry
+capacity will return those related entities with research-only relationship
+metadata.
+
 Ollama is the preferred first local LLM experiment once ticker context,
 as-of-time alignment, and the sentiment fixture set exist.
 It should be added as an optional `OllamaSentimentProvider`, selected by

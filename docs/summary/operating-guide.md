@@ -173,7 +173,8 @@ Continue the first backend vertical slice:
 17. Analysis as-of time and historical replay direction: documented.
 18. Ticker context ingestion direction: documented.
 19. Ticker onboarding, market-history backfill, and as-of-time alignment: in progress.
-20. Next: related-entity extraction before expanding sentiment provider complexity.
+20. Related-entity extraction: done.
+21. Next: curated sentiment fixtures and stronger baseline sentiment scoring.
 
 ## Escalation Triggers
 

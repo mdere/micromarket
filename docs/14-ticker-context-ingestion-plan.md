@@ -189,7 +189,7 @@ Implementation status:
 
 - `market_price_history`, `ticker_contexts`, `analysis_as_of`, and forecast feature-window fields are implemented.
 - Analysis creation now backfills market history and uses article `published_at` as the historical decision point when supplied.
-- Related-entity extraction is still pending and should be the next slice.
+- Deterministic related-entity extraction is implemented for the first alias/theme set.
 
 ## Second Implementation Slice
 
@@ -198,6 +198,13 @@ Implementation status:
 3. Add alias normalization for common ticker/company names.
 4. Show related entities and narrative keywords in API responses.
 5. Add tests for examples such as `NVDA` articles mentioning `TSMC` and `Samsung`.
+
+Implementation status:
+
+- `entities`, `article_entities`, and `asset_relationships` are implemented.
+- `POST /analyses` extracts related entities from article text, persists article/entity links, and returns entity metadata in article responses.
+- The first deterministic dictionary covers examples such as `TSMC`, `Samsung`, `HBM`, `AI chips`, and `foundry capacity`.
+- Next model-quality slice should add curated sentiment fixtures and improve baseline sentiment scoring.
 
 ## Guardrails
 

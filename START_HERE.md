@@ -87,6 +87,6 @@ As of the latest handoff, the backend vertical slice has:
 - panel-level loading states and failed-analysis detail,
 - selected-run evidence filtering and article-history reuse markers.
 - model-quality planning for stronger sentiment baselines and optional local LLM providers.
-- ticker-context planning for market-history backfill and related-entity extraction.
+- ticker-context market-history backfill and related-entity extraction.
 
-The next major step is foundation work before model building: implement ticker onboarding, historical market backfill, analysis as-of time, forecast target windows, and related-entity extraction before expanding sentiment fixtures or optional Ollama-backed sentiment providers.
+The next major step is model-quality work: add curated sentiment fixtures, improve deterministic baseline sentiment scoring, then consider optional Ollama-backed sentiment providers behind the existing provider interface.

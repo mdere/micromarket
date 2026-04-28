@@ -48,6 +48,7 @@ class Asset(Base):
     articles: Mapped[list["Article"]] = relationship(back_populates="asset")
     market_price_history: Mapped[list["MarketPriceHistory"]] = relationship(back_populates="asset")
     ticker_contexts: Mapped[list["TickerContext"]] = relationship(back_populates="asset")
+    asset_relationships: Mapped[list["AssetRelationship"]] = relationship(back_populates="asset")
 
 
 class MarketQuote(Base):
@@ -169,6 +170,7 @@ class Article(Base):
         secondary="analysis_articles", viewonly=True, back_populates="articles"
     )
     sentiment_runs: Mapped[list["SentimentRun"]] = relationship(back_populates="article")
+    article_entities: Mapped[list["ArticleEntity"]] = relationship(back_populates="article")
 
 
 class AnalysisArticle(Base):
@@ -184,6 +186,62 @@ class AnalysisArticle(Base):
 
     analysis: Mapped[Analysis] = relationship(back_populates="analysis_articles")
     article: Mapped[Article] = relationship(back_populates="analysis_articles")
+
+
+class Entity(Base):
+    __tablename__ = "entities"
+    __table_args__ = (UniqueConstraint("entity_type", "canonical_name"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    entity_type: Mapped[str] = mapped_column(String(32))
+    name: Mapped[str] = mapped_column(String(255))
+    symbol: Mapped[str | None] = mapped_column(String(32), index=True)
+    canonical_name: Mapped[str] = mapped_column(String(255), index=True)
+    aliases: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    article_entities: Mapped[list["ArticleEntity"]] = relationship(back_populates="entity")
+    asset_relationships: Mapped[list["AssetRelationship"]] = relationship(back_populates="entity")
+
+
+class ArticleEntity(Base):
+    __tablename__ = "article_entities"
+    __table_args__ = (UniqueConstraint("article_id", "entity_id", "provider"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    article_id: Mapped[str] = mapped_column(ForeignKey("articles.id"), index=True)
+    entity_id: Mapped[str] = mapped_column(ForeignKey("entities.id"), index=True)
+    provider: Mapped[str] = mapped_column(String(64))
+    model_name: Mapped[str] = mapped_column(String(128))
+    model_version: Mapped[str] = mapped_column(String(64))
+    confidence_score: Mapped[Decimal] = mapped_column(Numeric(6, 5))
+    evidence_snippets: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    article: Mapped[Article] = relationship(back_populates="article_entities")
+    entity: Mapped[Entity] = relationship(back_populates="article_entities")
+
+
+class AssetRelationship(Base):
+    __tablename__ = "asset_relationships"
+    __table_args__ = (UniqueConstraint("asset_id", "related_entity_id", "relationship_type"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    asset_id: Mapped[str] = mapped_column(ForeignKey("assets.id"), index=True)
+    related_entity_id: Mapped[str] = mapped_column(ForeignKey("entities.id"), index=True)
+    relationship_type: Mapped[str] = mapped_column(String(64))
+    source: Mapped[str] = mapped_column(String(64))
+    confidence_score: Mapped[Decimal] = mapped_column(Numeric(6, 5))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    asset: Mapped[Asset] = relationship(back_populates="asset_relationships")
+    entity: Mapped[Entity] = relationship(back_populates="asset_relationships")
 
 
 class SentimentRun(Base):

@@ -135,7 +135,12 @@ The product is research-only decision support. It should not issue direct buy/se
   - `MarketDataProvider` now supports daily price history, with `yfinance` and test fakes implementing the contract.
   - `POST /analyses` resolves `analysis_as_of`, backfills market history, stores feature-window timestamps, and uses historical close data for historical article forecasts.
   - API responses expose `analysis_as_of`, `analysis_as_of_source`, ticker context metadata, article `published_at`, and forecast feature-window timestamps.
-  - Entity extraction is not implemented yet and remains the next foundation slice.
+- Related-entity extraction slice is implemented:
+  - `entities`, `article_entities`, and `asset_relationships` are modeled and covered by Alembic revision `20260428_0005`.
+  - `app/ingestion/entities.py` implements a deterministic alias/theme extractor.
+  - `POST /analyses` now persists article/entity links and primary-ticker relationships.
+  - Article responses include related entity metadata, relationship type, provider/model lineage, confidence, and evidence snippets.
+  - Tests cover an `NVDA` article mentioning `TSMC`, `Samsung`, and `HBM`.
 
 ## Decisions From Questionnaire
 
@@ -283,7 +288,8 @@ The current work is implementing the first backend vertical slice:
 19. Historical as-of-time alignment is documented as the next architecture correction.
 20. Ticker context ingestion plan is documented.
 21. Ticker onboarding, market-history backfill, and as-of-time aligned historical replay are implemented.
-22. Next: implement related-entity and narrative keyword extraction before expanding sentiment provider complexity.
+22. Related-entity and narrative keyword extraction is implemented.
+23. Next: add curated sentiment fixtures and improve deterministic baseline sentiment scoring.
 
 ## Suggested Recommendation To Explore Next
 
@@ -300,8 +306,8 @@ The current recommended architecture is:
 - Also store next-close and 7-trading-day forecasts for later evaluation.
 - Start market data with `yfinance` behind a provider interface.
 - Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
-- Continue model-quality foundation work by adding related-entity extraction next. Market-history backfill, `analysis_as_of`, historical market lookbacks, and forecast target windows are now started in code.
-- After entity extraction is in place, improve deterministic sentiment fixtures and confidence/driver extraction, then add an optional Ollama sentiment provider behind `SentimentProvider`.
+- Continue model-quality work by adding curated sentiment fixtures and improving deterministic sentiment confidence/driver extraction.
+- After the sentiment baseline is measurable, add an optional Ollama sentiment provider behind `SentimentProvider`.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -328,7 +334,6 @@ When resuming:
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
 13. Read `docs/13-model-quality-plan.md`.
 14. Read `docs/14-ticker-context-ingestion-plan.md`.
-15. Implement related-entity and narrative keyword extraction.
-16. Add curated sentiment fixtures and improve the deterministic baseline provider.
-17. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
-18. Keep the UI and model outputs research-only and avoid buy/sell/hold language.
+15. Add curated sentiment fixtures and improve the deterministic baseline provider.
+16. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
+17. Keep the UI and model outputs research-only and avoid buy/sell/hold language.

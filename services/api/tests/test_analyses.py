@@ -257,6 +257,48 @@ def test_create_analysis_with_historical_article_uses_published_at_as_of(tmp_pat
         app.dependency_overrides.clear()
 
 
+def test_create_analysis_extracts_related_entities(tmp_path) -> None:
+    client = build_test_app(tmp_path)
+
+    try:
+        response = client.post(
+            "/analyses",
+            json={
+                "ticker": "NVDA",
+                "articles": [
+                    {
+                        "title": "NVDA supply chain note",
+                        "source": "manual note",
+                        "text": (
+                            "NVDA demand stayed strong as TSMC expanded foundry capacity. "
+                            "Samsung also discussed HBM supply for AI chips."
+                        ),
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 201
+        created = response.json()
+        entities = created["articles"][0]["entities"]
+        names = {entity["name"] for entity in entities}
+        relationships = {entity["name"]: entity["relationship_type"] for entity in entities}
+
+        assert "TSMC" in names
+        assert "Samsung" in names
+        assert "HBM" in names
+        assert relationships["TSMC"] == "supplier"
+        assert relationships["Samsung"] == "supplier"
+        assert relationships["HBM"] == "product_exposure"
+        tsmc = next(entity for entity in entities if entity["name"] == "TSMC")
+        assert tsmc["symbol"] == "TSM"
+        assert tsmc["provider"] == "deterministic"
+        assert tsmc["model_name"] == "entity-alias-baseline"
+        assert any("TSMC expanded foundry capacity" in snippet for snippet in tsmc["evidence_snippets"])
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_create_analysis_excludes_duplicate_article_from_aggregate(tmp_path) -> None:
     client = build_test_app(tmp_path)
 
