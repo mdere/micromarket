@@ -23,6 +23,9 @@ export function DashboardNotices({
         <section className="notice-panel error" aria-live="polite">
           This analysis failed during processing. Its lineage is still visible, but forecast and
           sentiment outputs may be incomplete.
+          {activeAnalysis.error_message ? (
+            <span className="notice-detail">{activeAnalysis.error_message}</span>
+          ) : null}
         </section>
       ) : null}
 

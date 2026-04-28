@@ -3,6 +3,7 @@ import { formatAccuracy, formatPercent } from "@/lib/format";
 
 type EvaluationMonitorProps = {
   error: string | null;
+  isLoading: boolean;
   isRefreshing: boolean;
   onRefresh: () => void;
   refreshResult: EvaluationRefreshResponse | null;
@@ -11,6 +12,7 @@ type EvaluationMonitorProps = {
 
 export function EvaluationMonitor({
   error,
+  isLoading,
   isRefreshing,
   onRefresh,
   refreshResult,
@@ -28,6 +30,7 @@ export function EvaluationMonitor({
         </button>
       </div>
       {error ? <p className="error-text">{error}</p> : null}
+      {isLoading ? <p className="loading-text">Loading evaluation summary...</p> : null}
       {refreshResult ? (
         <p className="body-text">
           Refresh complete: {refreshResult.evaluated_forecasts} evaluated,{" "}
@@ -43,7 +46,7 @@ export function EvaluationMonitor({
           ))}
         </div>
       ) : null}
-      {summary?.by_horizon.length ? (
+      {!isLoading && summary?.by_horizon.length ? (
         <div className="evaluation-grid">
           {summary.by_horizon.map((item) => (
             <article className="evaluation-row" key={item.horizon}>
@@ -55,12 +58,12 @@ export function EvaluationMonitor({
             </article>
           ))}
         </div>
-      ) : (
+      ) : !isLoading ? (
         <p className="muted-text">
           No evaluated forecasts yet. Run evaluation refresh after forecast horizons expire to
           populate model monitoring.
         </p>
-      )}
+      ) : null}
     </section>
   );
 }

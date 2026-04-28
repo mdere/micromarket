@@ -301,6 +301,10 @@ def test_create_analysis_reports_url_extraction_failure(tmp_path) -> None:
 
         assert response.status_code == 502
         assert "No article text could be extracted" in response.json()["detail"]
+        failed = client.get("/analyses?ticker=SPY")
+        assert failed.status_code == 200
+        assert failed.json()[0]["status"] == "failed"
+        assert "No article text could be extracted" in failed.json()[0]["error_message"]
     finally:
         app.dependency_overrides.clear()
 

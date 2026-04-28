@@ -65,7 +65,8 @@ button:disabled {
 .muted-text,
 .body-text,
 .limitations-list,
-.error-text {
+.error-text,
+.loading-text {
   color: var(--muted);
 }
 
@@ -234,6 +235,11 @@ button:disabled {
   border-color: #b9cbd7;
 }
 
+.timeline-row.failed {
+  background: #fff4f2;
+  border-color: #e5b8b2;
+}
+
 .timeline-row span,
 .timeline-row em {
   color: var(--muted);
@@ -300,6 +306,12 @@ button:disabled {
   background: #fff8e8;
   border-color: #e5d2a3;
   color: var(--warning);
+}
+
+.notice-detail {
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 .section-heading {
@@ -447,6 +459,12 @@ button:disabled {
 
 .error-text {
   color: var(--negative);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.loading-text {
   font-size: 12px;
   line-height: 1.45;
   margin: 0;

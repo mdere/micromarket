@@ -60,6 +60,7 @@ export type AnalysisResponse = {
   input_mode: string;
   created_at: string;
   completed_at: string | null;
+  error_message: string | null;
   message: string;
   limitations: string[];
   articles: ArticleResponse[];

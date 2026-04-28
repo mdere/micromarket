@@ -294,6 +294,7 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
         input_mode=analysis.input_mode,
         created_at=_datetime_to_str(analysis.created_at) or "",
         completed_at=_datetime_to_str(analysis.completed_at),
+        error_message=analysis.error_message,
         message=message,
         limitations=analysis.limitations or [],
         articles=[

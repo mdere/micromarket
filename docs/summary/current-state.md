@@ -104,6 +104,10 @@ The product is research-only decision support. It should not issue direct buy/se
   - `apps/web/app/page.tsx` now owns state and API orchestration.
   - Dashboard UI panels live under `apps/web/components/dashboard`.
   - Shared API response types and formatting helpers live under `apps/web/lib`.
+- Panel-level loading and failed-analysis detail slice is implemented in the working tree:
+  - `AnalysisResponse` now exposes persisted `error_message` for failed analyses.
+  - The dashboard shows loading states for ticker history, selected analysis fetches, and evaluation summary loads.
+  - Failed analysis rows are visually distinct in the timeline, and failed-analysis notices include backend error details when available.
 
 ## Decisions From Questionnaire
 
@@ -243,9 +247,10 @@ The current work is implementing the first backend vertical slice:
 11. Article relevance, duplicate handling, and extraction failure reporting are in place.
 12. Minimal UI over the stable API response is in place.
 13. Ticker-centered analysis history is implemented.
-14. UI error states, evaluation summary visibility, and evaluation refresh controls are implemented in the working tree.
-15. Next.js dashboard component refactor is implemented in the working tree.
-16. Next: validate and commit the UI refresh/refactor slice.
+14. UI error states, evaluation summary visibility, and evaluation refresh controls are implemented.
+15. Next.js dashboard component refactor is implemented.
+16. Panel-level loading states and clearer failed-analysis detail are implemented in the working tree.
+17. Next: validate and commit the loading/error-detail slice.
 
 ## Suggested Recommendation To Explore Next
 
@@ -288,5 +293,6 @@ When resuming:
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
 13. Validate and commit the ticker-centered history slice if it is still uncommitted.
 14. Validate and commit the UI refresh/refactor slice if it is still uncommitted.
-15. Continue with UI polish around panel-level loading states and clearer failed-analysis detail.
-16. Keep the UI research-only and avoid buy/sell/hold language.
+15. Validate and commit the loading/error-detail slice if it is still uncommitted.
+16. Continue with UI polish around evidence grouping/filtering and empty-state ergonomics.
+17. Keep the UI research-only and avoid buy/sell/hold language.

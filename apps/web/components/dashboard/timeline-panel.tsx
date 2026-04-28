@@ -4,14 +4,18 @@ import { formatDateTime, formatScore } from "@/lib/format";
 type TimelinePanelProps = {
   activeAnalysisId: string | null;
   analyses: AnalysisResponse[];
+  isLoading: boolean;
   onSelectAnalysis: (analysisId: string) => void;
+  selectedAnalysisId: string | null;
   selectedTicker: string;
 };
 
 export function TimelinePanel({
   activeAnalysisId,
   analyses,
+  isLoading,
   onSelectAnalysis,
+  selectedAnalysisId,
   selectedTicker
 }: TimelinePanelProps) {
   return (
@@ -20,7 +24,9 @@ export function TimelinePanel({
         <h1>{selectedTicker} Analysis Timeline</h1>
         <span>{analyses.length} runs</span>
       </div>
-      {analyses.length ? (
+      {isLoading ? (
+        <p className="loading-text">Loading {selectedTicker} history...</p>
+      ) : analyses.length ? (
         <div className="timeline-list">
           {analyses.map((analysis) => {
             const forecast =
@@ -29,7 +35,14 @@ export function TimelinePanel({
               null;
             return (
               <button
-                className={activeAnalysisId === analysis.id ? "timeline-row active" : "timeline-row"}
+                className={[
+                  "timeline-row",
+                  activeAnalysisId === analysis.id ? "active" : "",
+                  analysis.status === "failed" ? "failed" : ""
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                disabled={selectedAnalysisId === analysis.id}
                 key={analysis.id}
                 type="button"
                 onClick={() => onSelectAnalysis(analysis.id)}
@@ -37,7 +50,13 @@ export function TimelinePanel({
                 <span>{formatDateTime(analysis.created_at)}</span>
                 <strong>{forecast?.predicted_direction ?? analysis.status}</strong>
                 <em>{analysis.articles.length} articles</em>
-                <em>{formatScore(forecast?.confidence_score)} confidence</em>
+                <em>
+                  {selectedAnalysisId === analysis.id
+                    ? "loading"
+                    : analysis.status === "failed"
+                      ? "failed"
+                      : `${formatScore(forecast?.confidence_score)} confidence`}
+                </em>
               </button>
             );
           })}

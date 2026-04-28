@@ -40,7 +40,10 @@ export default function Home() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(false);
+  const [isLoadingEvaluation, setIsLoadingEvaluation] = useState(false);
   const [isRefreshingEvaluation, setIsRefreshingEvaluation] = useState(false);
+  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
 
   const primaryForecast = useMemo(() => {
     if (!activeAnalysis) {
@@ -101,6 +104,7 @@ export default function Home() {
 
   async function loadEvaluationSummary() {
     setEvaluationError(null);
+    setIsLoadingEvaluation(true);
     try {
       const response = await fetch(`${apiBaseUrl}/evaluations/summary`, { cache: "no-store" });
       if (!response.ok) {
@@ -110,6 +114,8 @@ export default function Home() {
       setEvaluationSummary((await response.json()) as EvaluationSummaryResponse);
     } catch {
       setEvaluationError("API not reachable while loading evaluation summary.");
+    } finally {
+      setIsLoadingEvaluation(false);
     }
   }
 
@@ -146,6 +152,7 @@ export default function Home() {
     }
 
     setWorkspaceError(null);
+    setIsLoadingWorkspace(true);
     setSelectedTicker(normalized);
     setTickerInput(normalized);
     setStatusMessage(`Loading ${normalized} history`);
@@ -166,6 +173,8 @@ export default function Home() {
       );
     } catch {
       setWorkspaceError("API not reachable while loading ticker history.");
+    } finally {
+      setIsLoadingWorkspace(false);
     }
   }
 
@@ -237,6 +246,7 @@ export default function Home() {
 
   async function selectAnalysis(analysisId: string) {
     setWorkspaceError(null);
+    setSelectedAnalysisId(analysisId);
     setStatusMessage("Loading analysis");
     try {
       const response = await fetch(`${apiBaseUrl}/analyses/${analysisId}`, { cache: "no-store" });
@@ -248,6 +258,8 @@ export default function Home() {
       setStatusMessage("Analysis loaded");
     } catch {
       setWorkspaceError("API not reachable while loading analysis.");
+    } finally {
+      setSelectedAnalysisId(null);
     }
   }
 
@@ -295,7 +307,9 @@ export default function Home() {
           <TimelinePanel
             activeAnalysisId={activeAnalysis?.id ?? null}
             analyses={tickerAnalyses}
+            isLoading={isLoadingWorkspace}
             onSelectAnalysis={(analysisId) => void selectAnalysis(analysisId)}
+            selectedAnalysisId={selectedAnalysisId}
             selectedTicker={selectedTicker}
           />
 
@@ -305,6 +319,7 @@ export default function Home() {
 
           <EvaluationMonitor
             error={evaluationError}
+            isLoading={isLoadingEvaluation}
             isRefreshing={isRefreshingEvaluation}
             onRefresh={() => void refreshEvaluations()}
             refreshResult={evaluationRefresh}
