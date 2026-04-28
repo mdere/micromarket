@@ -77,9 +77,10 @@ The product is research-only decision support. It should not issue direct buy/se
 - Evidence filtering slice is implemented:
   - `app/ingestion/evidence.py` scores article relevance with deterministic ticker/market-context rules.
   - Duplicate content hashes and low-relevance articles are persisted but excluded from aggregate sentiment and forecast inputs.
+  - Articles now need direct ticker evidence before they can be included in aggregate sentiment or forecast inputs; generic market context alone is not enough.
   - Article responses include relevance, duplicate group, inclusion, and exclusion metadata.
   - URL extraction failures return clear `502` responses and mark analyses as failed.
-- Minimal UI slice is implemented in the working tree:
+- Minimal UI slice is implemented:
   - `apps/web/app/page.tsx` now provides a usable analysis workflow over the API.
   - Users can submit a ticker with manual article text, a URL, or both.
   - The page renders primary forecast, sentiment aggregate, market quote, evidence metadata, limitations, and recent analyses.
@@ -89,6 +90,12 @@ The product is research-only decision support. It should not issue direct buy/se
   - A ticker should behave like the durable workspace for repeated research runs.
   - Example: if AMD is analyzed 20 times with different articles, the user should be able to navigate to AMD and review all AMD analyses, submitted articles, evidence decisions, forecasts, sentiment, limitations, and later evaluation outcomes.
   - This is not a watchlist/multi-ticker batch feature; MVP remains one user-triggered ticker analysis at a time.
+- Ticker-centered history slice is implemented in the working tree:
+  - `GET /analyses` accepts an optional `ticker` query parameter.
+  - Analysis responses include `created_at` and `completed_at` timestamps for timeline display.
+  - The web dashboard now loads a selected ticker workspace, renders a ticker-scoped analysis timeline, and shows selected-run evidence plus ticker-level article history.
+  - Article titles link to source URLs when a URL is available.
+  - Tests cover ticker-filtered analysis listing.
 
 ## Decisions From Questionnaire
 
@@ -226,9 +233,9 @@ The current work is implementing the first backend vertical slice:
 9. Evaluation refresh for expired forecasts and stored outcomes is in place.
 10. URL ingestion over the stable analysis/evaluation backbone is in place.
 11. Article relevance, duplicate handling, and extraction failure reporting are in place.
-12. Minimal UI over the stable API response is in place in the working tree.
-13. Next: broaden validation with frontend checks and commit the completed UI slice.
-14. Then refactor the UI/API flow around ticker-centered analysis history.
+12. Minimal UI over the stable API response is in place.
+13. Ticker-centered analysis history is implemented in the working tree.
+14. Next: validate and commit the ticker-centered history slice.
 15. Then polish API error states and evaluation summary visibility.
 
 ## Suggested Recommendation To Explore Next
@@ -245,7 +252,7 @@ The current recommended architecture is:
 - Primary forecast horizon: 3 trading days.
 - Also store next-close and 7-trading-day forecasts for later evaluation.
 - Start market data with `yfinance` behind a provider interface.
-- Treat ticker-centered history as the next UI shape: one ticker page/workspace should list all analyses and articles for that ticker before watchlists or batch workflows are introduced.
+- Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -270,14 +277,6 @@ When resuming:
 10. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
 11. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
-13. Validate and commit the current minimal UI slice if it is still uncommitted.
-14. Add or adapt backend list endpoints so the web app can fetch analyses by ticker without loading unrelated runs.
-15. Refactor the web dashboard from a flat recent-analysis list into a ticker-centered workspace:
-   - ticker search/selection,
-   - selected ticker summary,
-   - analysis timeline for that ticker,
-   - article/evidence history for that ticker,
-   - selected analysis detail.
-16. Keep the UI research-only and avoid buy/sell/hold language.
-17. Update tests and docs after the ticker-history implementation lands.
-18. Continue with API error states and evaluation summary visibility.
+13. Validate and commit the ticker-centered history slice if it is still uncommitted.
+14. Continue with API error states and evaluation summary visibility.
+15. Keep the UI research-only and avoid buy/sell/hold language.

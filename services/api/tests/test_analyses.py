@@ -244,11 +244,45 @@ def test_create_analysis_excludes_low_relevance_article_from_aggregate(tmp_path)
         assert created["sentiment_aggregate"]["evidence_strength_score"] == "0.00000"
         assert created["articles"][0]["included_in_forecast"] is False
         assert created["articles"][0]["relevance_score"] == "0.00000"
-        assert "relevant enough" in created["articles"][0]["exclusion_reason"]
+        assert "did not reference the requested ticker" in created["articles"][0]["exclusion_reason"]
         primary_forecast = next(
             run for run in created["forecast_runs"] if run["horizon"] == "3_trading_days"
         )
         assert primary_forecast["feature_snapshot"]["included_article_count"] == 0
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_create_analysis_excludes_market_article_for_wrong_ticker(tmp_path) -> None:
+    client = build_test_app(tmp_path)
+
+    try:
+        response = client.post(
+            "/analyses",
+            json={
+                "ticker": "AMD",
+                "articles": [
+                    {
+                        "title": "Why NVIDIA stock moved today",
+                        "source": "manual note",
+                        "url": "https://example.com/markets/nvidia-nvda-stock",
+                        "text": (
+                            "NVIDIA shares moved after analysts discussed market demand, "
+                            "earnings momentum, and AI chip revenue."
+                        ),
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 201
+        created = response.json()
+        assert created["ticker"] == "AMD"
+        assert created["sentiment_aggregate"]["article_count"] == 1
+        assert created["sentiment_aggregate"]["included_article_count"] == 0
+        assert created["articles"][0]["included_in_forecast"] is False
+        assert created["articles"][0]["relevance_score"] == "0.15000"
+        assert "did not reference the requested ticker" in created["articles"][0]["exclusion_reason"]
     finally:
         app.dependency_overrides.clear()
 
@@ -267,5 +301,37 @@ def test_create_analysis_reports_url_extraction_failure(tmp_path) -> None:
 
         assert response.status_code == 502
         assert "No article text could be extracted" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_list_analyses_can_filter_by_ticker(tmp_path) -> None:
+    client = build_test_app(tmp_path)
+
+    try:
+        for ticker in ("AMD", "SPY", "AMD"):
+            response = client.post(
+                "/analyses",
+                json={
+                    "ticker": ticker,
+                    "articles": [
+                        {
+                            "title": f"{ticker} note",
+                            "source": "manual note",
+                            "text": f"{ticker} saw improving demand and resilient market breadth.",
+                        }
+                    ],
+                },
+            )
+            assert response.status_code == 201
+
+        all_response = client.get("/analyses")
+        amd_response = client.get("/analyses?ticker=amd")
+
+        assert all_response.status_code == 200
+        assert len(all_response.json()) == 3
+        assert amd_response.status_code == 200
+        assert [analysis["ticker"] for analysis in amd_response.json()] == ["AMD", "AMD"]
+        assert all(analysis["created_at"] for analysis in amd_response.json())
     finally:
         app.dependency_overrides.clear()

@@ -62,6 +62,8 @@ type AnalysisResponse = {
   status: string;
   primary_horizon: string;
   input_mode: string;
+  created_at: string;
+  completed_at: string | null;
   message: string;
   limitations: string[];
   articles: ArticleResponse[];
@@ -73,10 +75,12 @@ type AnalysisResponse = {
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export default function Home() {
-  const [ticker, setTicker] = useState("SPY");
+  const [tickerInput, setTickerInput] = useState("SPY");
+  const [selectedTicker, setSelectedTicker] = useState("SPY");
   const [manualText, setManualText] = useState("");
   const [articleUrl, setArticleUrl] = useState("");
   const [activeAnalysis, setActiveAnalysis] = useState<AnalysisResponse | null>(null);
+  const [tickerAnalyses, setTickerAnalyses] = useState<AnalysisResponse[]>([]);
   const [recentAnalyses, setRecentAnalyses] = useState<AnalysisResponse[]>([]);
   const [statusMessage, setStatusMessage] = useState("Ready");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,6 +96,35 @@ export default function Home() {
     );
   }, [activeAnalysis]);
 
+  const tickerOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return recentAnalyses
+      .map((analysis) => analysis.ticker)
+      .filter((ticker) => {
+        if (seen.has(ticker)) {
+          return false;
+        }
+        seen.add(ticker);
+        return true;
+      });
+  }, [recentAnalyses]);
+
+  const articleHistory = useMemo(() => {
+    const articles = new Map<string, { article: ArticleResponse; analyses: string[] }>();
+    for (const analysis of tickerAnalyses) {
+      for (const article of analysis.articles) {
+        const key = article.content_hash || article.id;
+        const existing = articles.get(key);
+        if (existing) {
+          existing.analyses.push(analysis.id);
+        } else {
+          articles.set(key, { article, analyses: [analysis.id] });
+        }
+      }
+    }
+    return Array.from(articles.values());
+  }, [tickerAnalyses]);
+
   async function loadRecentAnalyses() {
     try {
       const response = await fetch(`${apiBaseUrl}/analyses`, { cache: "no-store" });
@@ -99,11 +132,37 @@ export default function Home() {
         setStatusMessage(`Recent analyses unavailable (${response.status})`);
         return;
       }
-      const analyses = (await response.json()) as AnalysisResponse[];
-      setRecentAnalyses(analyses);
-      if (!activeAnalysis && analyses.length > 0) {
-        setActiveAnalysis(analyses[0]);
+      setRecentAnalyses((await response.json()) as AnalysisResponse[]);
+    } catch {
+      setStatusMessage("API not reachable");
+    }
+  }
+
+  async function loadTickerWorkspace(symbol: string, preferredAnalysisId?: string) {
+    const normalized = normalizeTicker(symbol);
+    if (!normalized) {
+      setStatusMessage("Enter a ticker to load its workspace.");
+      return;
+    }
+
+    setSelectedTicker(normalized);
+    setTickerInput(normalized);
+    setStatusMessage(`Loading ${normalized} history`);
+    try {
+      const response = await fetch(`${apiBaseUrl}/analyses?ticker=${normalized}`, {
+        cache: "no-store"
+      });
+      if (!response.ok) {
+        setStatusMessage(`${normalized} history unavailable (${response.status})`);
+        return;
       }
+      const analyses = (await response.json()) as AnalysisResponse[];
+      setTickerAnalyses(analyses);
+      const preferred = analyses.find((analysis) => analysis.id === preferredAnalysisId);
+      setActiveAnalysis(preferred ?? analyses[0] ?? null);
+      setStatusMessage(
+        analyses.length ? `${normalized} history loaded` : `${normalized} workspace ready`
+      );
     } catch {
       setStatusMessage("API not reachable");
     }
@@ -111,14 +170,21 @@ export default function Home() {
 
   useEffect(() => {
     void loadRecentAnalyses();
+    void loadTickerWorkspace(selectedTicker);
   }, []);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleWorkspaceSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    await loadTickerWorkspace(tickerInput);
+  }
+
+  async function handleAnalysisSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const ticker = normalizeTicker(tickerInput || selectedTicker);
     const articles = [];
     if (manualText.trim()) {
       articles.push({
-        title: `${ticker.toUpperCase()} manual note`,
+        title: `${ticker} manual note`,
         source: "manual note",
         text: manualText.trim()
       });
@@ -126,19 +192,23 @@ export default function Home() {
     if (articleUrl.trim()) {
       articles.push({ url: articleUrl.trim() });
     }
+    if (!ticker) {
+      setStatusMessage("Enter a ticker before running an analysis.");
+      return;
+    }
     if (articles.length === 0) {
       setStatusMessage("Add manual text or a URL before running an analysis.");
       return;
     }
 
     setIsSubmitting(true);
-    setStatusMessage("Running analysis");
+    setStatusMessage(`Running ${ticker} analysis`);
     try {
       const response = await fetch(`${apiBaseUrl}/analyses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ticker: ticker.trim().toUpperCase(),
+          ticker,
           articles
         })
       });
@@ -148,9 +218,11 @@ export default function Home() {
         return;
       }
       const analysis = body as AnalysisResponse;
-      setActiveAnalysis(analysis);
+      setManualText("");
+      setArticleUrl("");
       setStatusMessage("Analysis completed");
       await loadRecentAnalyses();
+      await loadTickerWorkspace(analysis.ticker, analysis.id);
     } catch {
       setStatusMessage("API not reachable");
     } finally {
@@ -178,23 +250,49 @@ export default function Home() {
       <header className="topbar">
         <div className="brand">
           <strong>micromarket</strong>
-          <span>Research-only market evidence workspace</span>
+          <span>Research-only ticker evidence workspace</span>
         </div>
         <div className="api-chip">{statusMessage}</div>
       </header>
 
       <section className="workspace" aria-label="micromarket research workspace">
         <aside className="panel left-panel">
-          <form className="analysis-form" onSubmit={handleSubmit}>
+          <form className="ticker-form" onSubmit={handleWorkspaceSubmit}>
             <label>
-              <span>Ticker</span>
+              <span>Ticker Workspace</span>
               <input
-                value={ticker}
-                onChange={(event) => setTicker(event.target.value)}
+                value={tickerInput}
+                onChange={(event) => setTickerInput(event.target.value.toUpperCase())}
                 maxLength={16}
                 placeholder="SPY"
               />
             </label>
+            <button type="submit">Load</button>
+          </form>
+
+          {tickerOptions.length ? (
+            <section className="ticker-list" aria-label="recent tickers">
+              <h2>Recent Tickers</h2>
+              <div>
+                {tickerOptions.map((ticker) => (
+                  <button
+                    className={ticker === selectedTicker ? "ticker-pill active" : "ticker-pill"}
+                    key={ticker}
+                    type="button"
+                    onClick={() => void loadTickerWorkspace(ticker)}
+                  >
+                    {ticker}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <form className="analysis-form" onSubmit={handleAnalysisSubmit}>
+            <div className="form-heading">
+              <h2>New {selectedTicker} Analysis</h2>
+              <span>one run, preserved lineage</span>
+            </div>
             <label>
               <span>Manual Article Text</span>
               <textarea
@@ -216,48 +314,55 @@ export default function Home() {
               {isSubmitting ? "Running" : "Run Analysis"}
             </button>
           </form>
-
-          <section className="recent-list" aria-label="recent analyses">
-            <h2>Recent Analyses</h2>
-            {recentAnalyses.length === 0 ? (
-              <p className="muted-text">No analyses loaded.</p>
-            ) : (
-              recentAnalyses.map((analysis) => (
-                <button
-                  className="recent-row"
-                  key={analysis.id}
-                  type="button"
-                  onClick={() => void selectAnalysis(analysis.id)}
-                >
-                  <span>{analysis.ticker}</span>
-                  <strong>{analysis.status}</strong>
-                </button>
-              ))
-            )}
-          </section>
         </aside>
 
         <section className="main-panel">
           <section className="summary-strip">
-            <Metric label="Ticker" value={activeAnalysis?.ticker ?? "None"} />
-            <Metric label="Input" value={formatInputMode(activeAnalysis?.input_mode)} />
-            <Metric
-              label="Quote"
-              value={formatPrice(activeAnalysis?.market_quote?.price)}
-            />
-            <Metric
-              label="Evidence"
-              value={
-                activeAnalysis?.sentiment_aggregate
-                  ? `${activeAnalysis.sentiment_aggregate.included_article_count}/${activeAnalysis.sentiment_aggregate.article_count}`
-                  : "0/0"
-              }
-            />
+            <Metric label="Ticker" value={selectedTicker} />
+            <Metric label="Runs" value={String(tickerAnalyses.length)} />
+            <Metric label="Articles" value={String(articleHistory.length)} />
+            <Metric label="Quote" value={formatPrice(activeAnalysis?.market_quote?.price)} />
+          </section>
+
+          <section className="panel timeline-panel">
+            <div className="section-heading">
+              <h1>{selectedTicker} Analysis Timeline</h1>
+              <span>{tickerAnalyses.length} runs</span>
+            </div>
+            {tickerAnalyses.length ? (
+              <div className="timeline-list">
+                {tickerAnalyses.map((analysis) => {
+                  const forecast =
+                    analysis.forecast_runs.find(
+                      (run) => run.horizon === analysis.primary_horizon
+                    ) ?? analysis.forecast_runs[0] ?? null;
+                  return (
+                    <button
+                      className={
+                        activeAnalysis?.id === analysis.id ? "timeline-row active" : "timeline-row"
+                      }
+                      key={analysis.id}
+                      type="button"
+                      onClick={() => void selectAnalysis(analysis.id)}
+                    >
+                      <span>{formatDateTime(analysis.created_at)}</span>
+                      <strong>{forecast?.predicted_direction ?? analysis.status}</strong>
+                      <em>{analysis.articles.length} articles</em>
+                      <em>{formatScore(forecast?.confidence_score)} confidence</em>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="muted-text">
+                No saved analyses for {selectedTicker}. Add article evidence to create the first run.
+              </p>
+            )}
           </section>
 
           <section className="panel primary-panel">
             <div className="section-heading">
-              <h1>Primary Forecast</h1>
+              <h1>Selected Forecast</h1>
               <span>{primaryForecast?.horizon ?? "No forecast"}</span>
             </div>
             {primaryForecast ? (
@@ -294,8 +399,8 @@ export default function Home() {
               {activeAnalysis?.sentiment_aggregate ? (
                 <div className="compact-stats">
                   <Metric
-                    label="Agreement"
-                    value={formatScore(activeAnalysis.sentiment_aggregate.agreement_score)}
+                    label="Included"
+                    value={`${activeAnalysis.sentiment_aggregate.included_article_count}/${activeAnalysis.sentiment_aggregate.article_count}`}
                   />
                   <Metric
                     label="Strength"
@@ -327,33 +432,38 @@ export default function Home() {
 
           <section className="panel">
             <div className="section-heading">
-              <h2>Evidence</h2>
+              <h2>Selected Run Evidence</h2>
               <span>{activeAnalysis?.articles.length ?? 0} articles</span>
             </div>
-            <div className="evidence-list">
-              {activeAnalysis?.articles.length ? (
-                activeAnalysis.articles.map((article) => (
-                  <article className="evidence-row" key={article.id}>
+            <EvidenceList articles={activeAnalysis?.articles ?? []} />
+          </section>
+
+          <section className="panel">
+            <div className="section-heading">
+              <h2>{selectedTicker} Article History</h2>
+              <span>{articleHistory.length} unique articles</span>
+            </div>
+            {articleHistory.length ? (
+              <div className="evidence-list">
+                {articleHistory.map(({ article, analyses }) => (
+                  <article className="evidence-row" key={article.content_hash}>
                     <div>
-                      <strong>{article.title ?? article.url ?? "Untitled article"}</strong>
+                      <ArticleTitle article={article} />
                       <p>{article.source ?? article.input_type}</p>
                     </div>
                     <div className="evidence-meta">
                       <span>{article.word_count} words</span>
-                      <span>relevance {formatScore(article.relevance_score)}</span>
+                      <span>{analyses.length} run{analyses.length === 1 ? "" : "s"}</span>
                       <span className={article.included_in_forecast ? "included" : "excluded"}>
                         {article.included_in_forecast ? "included" : "excluded"}
                       </span>
                     </div>
-                    {article.exclusion_reason ? (
-                      <p className="warning-text">{article.exclusion_reason}</p>
-                    ) : null}
                   </article>
-                ))
-              ) : (
-                <p className="muted-text">No evidence loaded.</p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted-text">No article history for this ticker yet.</p>
+            )}
           </section>
 
           <section className="panel">
@@ -376,6 +486,51 @@ export default function Home() {
   );
 }
 
+function EvidenceList({ articles }: { articles: ArticleResponse[] }) {
+  if (!articles.length) {
+    return <p className="muted-text">No evidence loaded.</p>;
+  }
+
+  return (
+    <div className="evidence-list">
+      {articles.map((article) => (
+        <article className="evidence-row" key={article.id}>
+          <div>
+            <ArticleTitle article={article} />
+            <p>{article.source ?? article.input_type}</p>
+          </div>
+          <div className="evidence-meta">
+            <span>{article.word_count} words</span>
+            <span>relevance {formatScore(article.relevance_score)}</span>
+            <span className={article.included_in_forecast ? "included" : "excluded"}>
+              {article.included_in_forecast ? "included" : "excluded"}
+            </span>
+          </div>
+          {article.exclusion_reason ? (
+            <p className="warning-text">{article.exclusion_reason}</p>
+          ) : null}
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function ArticleTitle({ article }: { article: ArticleResponse }) {
+  const label = article.title ?? article.url ?? "Untitled article";
+
+  if (!article.url) {
+    return <strong>{label}</strong>;
+  }
+
+  return (
+    <strong>
+      <a href={article.url} rel="noreferrer" target="_blank">
+        {label}
+      </a>
+    </strong>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="metric">
@@ -385,11 +540,8 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatInputMode(value?: string) {
-  if (!value) {
-    return "None";
-  }
-  return value.replace("_", " ");
+function normalizeTicker(value: string) {
+  return value.trim().toUpperCase();
 }
 
 function formatPrice(value?: string | null) {
@@ -418,6 +570,18 @@ function formatNumber(value?: number | null) {
     return "None";
   }
   return Intl.NumberFormat("en-US", { notation: "compact" }).format(value);
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return "No timestamp";
+  }
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(value));
 }
 
 function directionClass(direction: string) {

@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -239,8 +239,11 @@ def get_analysis(analysis_id: str, db: Session = Depends(get_db)) -> AnalysisRes
 
 
 @router.get("", response_model=list[AnalysisResponse])
-def list_analyses(db: Session = Depends(get_db)) -> list[AnalysisResponse]:
-    analyses = db.scalars(
+def list_analyses(
+    ticker: str | None = Query(default=None, min_length=1, max_length=16),
+    db: Session = Depends(get_db),
+) -> list[AnalysisResponse]:
+    query = (
         select(Analysis)
         .options(selectinload(Analysis.asset), selectinload(Analysis.articles))
         .options(selectinload(Analysis.market_quotes))
@@ -250,6 +253,12 @@ def list_analyses(db: Session = Depends(get_db)) -> list[AnalysisResponse]:
         .options(selectinload(Analysis.forecast_runs))
         .order_by(Analysis.created_at.desc())
         .limit(25)
+    )
+    if ticker:
+        query = query.join(Analysis.asset).where(Asset.symbol == ticker.upper().strip())
+
+    analyses = db.scalars(
+        query
     ).all()
     return [_to_response(analysis, "Analysis retrieved.") for analysis in analyses]
 
@@ -283,6 +292,8 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
         status=analysis.status,
         primary_horizon=analysis.primary_horizon,
         input_mode=analysis.input_mode,
+        created_at=_datetime_to_str(analysis.created_at) or "",
+        completed_at=_datetime_to_str(analysis.completed_at),
         message=message,
         limitations=analysis.limitations or [],
         articles=[

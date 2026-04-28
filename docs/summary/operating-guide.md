@@ -151,8 +151,8 @@ Continue the first backend vertical slice:
 8. URL ingestion: done.
 9. Article relevance, duplicate handling, and extraction failure reporting: done.
 10. Minimal UI over the stable API response: done.
-11. Next: ticker-centered analysis history in the UI/API.
-12. Then UI polish, API error states, and evaluation summary visibility.
+11. Ticker-centered analysis history in the UI/API: in progress.
+12. Next: API error states and evaluation summary visibility.
 
 ## Escalation Triggers
 

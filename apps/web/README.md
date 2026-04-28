@@ -18,11 +18,11 @@ The dashboard calls `http://localhost:8000` by default. Override it with:
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
 ```
 
-The first UI slice supports creating analyses from manual article text or a URL,
-selecting recent analyses, and viewing forecast, sentiment, market quote,
-evidence, and limitation metadata.
+The dashboard supports creating analyses from manual article text or a URL,
+loading a selected ticker workspace, selecting prior analyses for that ticker,
+and viewing forecast, sentiment, market quote, evidence, and limitation
+metadata. Article rows link back to the source URL when one is available.
 
-Next UI direction: refactor the flat recent-analysis experience into
-ticker-centered history. A selected ticker, such as AMD, should show all prior
-AMD analysis runs and the articles/evidence used across those runs while
-keeping every individual analysis traceable.
+Ticker-centered history is the active UI shape. A selected ticker, such as AMD,
+shows prior AMD analysis runs and the articles/evidence used across those runs
+while keeping every individual analysis traceable.

@@ -14,7 +14,7 @@ class EvidenceDecision:
 
 
 class ArticleEvidencePolicy:
-    minimum_relevance = Decimal("0.15000")
+    minimum_relevance = Decimal("0.40000")
 
     def decide(
         self,
@@ -26,8 +26,12 @@ class ArticleEvidencePolicy:
         relevance_score = self._relevance_score(article, ticker)
         exclusion_reason = None
 
+        has_ticker_evidence = self._has_ticker_evidence(article, ticker)
+
         if duplicate_group_id is not None:
             exclusion_reason = "Duplicate article content already included in this analysis."
+        elif not has_ticker_evidence:
+            exclusion_reason = "Article text did not reference the requested ticker."
         elif relevance_score < self.minimum_relevance:
             exclusion_reason = "Article text did not appear relevant enough to the requested ticker."
 
@@ -55,6 +59,14 @@ class ArticleEvidencePolicy:
             score += Decimal("0.15000")
 
         return min(score, Decimal("1.00000"))
+
+    def _has_ticker_evidence(self, article: NormalizedArticle, ticker: str) -> bool:
+        ticker_lower = ticker.lower()
+        return (
+            self._contains_token(article.title or "", ticker_lower)
+            or self._contains_token(article.text, ticker_lower)
+            or ticker_lower in (article.url or "").lower()
+        )
 
     def _contains_token(self, value: str, token: str) -> bool:
         return token in re.findall(r"[a-zA-Z]+", value.lower())

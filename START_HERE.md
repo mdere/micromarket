@@ -76,9 +76,7 @@ As of the latest handoff, the backend vertical slice has:
 - evaluation refresh and summary over persisted forecast outcomes,
 - URL article ingestion through a provider boundary,
 - article relevance, duplicate handling, and extraction failure reporting,
-- minimal UI over the stable analysis API response.
+- minimal UI over the stable analysis API response,
+- ticker-centered analysis history in the UI/API.
 
-The next major step is ticker-centered history: select a ticker, show all
-analysis runs for that ticker, and preserve the article/evidence lineage for
-each run. After that, continue with API error states and evaluation summary
-visibility.
+The next major step is API error states and evaluation summary visibility.

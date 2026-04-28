@@ -95,6 +95,8 @@ class AnalysisResponse(BaseModel):
     status: str
     primary_horizon: str
     input_mode: str = "manual_text"
+    created_at: str
+    completed_at: str | None = None
     message: str
     limitations: list[str] = Field(default_factory=list)
     articles: list[ArticleResponse] = Field(default_factory=list)

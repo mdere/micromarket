@@ -175,6 +175,7 @@ Current API endpoints:
 - `POST /analyses`
 - `GET /analyses/{analysis_id}`
 - `GET /analyses`
+- `GET /analyses?ticker=SPY`
 - `POST /evaluations/refresh`
 - `GET /evaluations/summary`
 
@@ -184,6 +185,8 @@ market quote through the provider interface,
 persists the quote snapshot, scores article sentiment with the baseline
 provider, persists sentiment runs and an aggregate, creates baseline forecast
 runs, and returns stored analysis/article/quote/sentiment/forecast metadata.
+Analysis responses include creation/completion timestamps, and list responses
+can be filtered by ticker for ticker-scoped UI history.
 Evaluation refresh can persist outcomes for expired forecast runs.
 
 Run database migrations from `services/api`:
