@@ -1,6 +1,6 @@
 # micromarket Operating Guide
 
-Last updated: 2026-04-26
+Last updated: 2026-04-28
 
 This guide is the durable instruction set for future Codex sessions. Read it with `docs/summary/current-state.md` before making changes.
 
@@ -11,6 +11,8 @@ Build a local-first AI/ML stock research system that can ingest article evidence
 The product is research-only decision support. It must not give direct buy/sell/hold instructions in the MVP.
 
 The highest-risk work is data/model quality, lineage, explainability, and evaluation. Prioritize the trustworthy backend/data pipeline before UI polish.
+
+The current UI/product direction is ticker-centered history: the MVP still runs one user-triggered analysis at a time, but repeated analyses for the same symbol should be grouped under that ticker so the user can revisit all related article evidence, forecasts, sentiment, limitations, and later evaluation outcomes.
 
 ## Session Start Protocol
 
@@ -110,6 +112,7 @@ Frontend validation should be added once active UI work resumes.
 - Tests should use fake providers for network-dependent services.
 - Provider failures should return clear errors and should not corrupt persisted lineage.
 - Route responses should expose enough metadata to evaluate and debug the pipeline.
+- List/read endpoints should support ticker-centered navigation as the UI matures, without losing analysis-level lineage.
 
 ## Database And Migration Guardrails
 
@@ -148,7 +151,8 @@ Continue the first backend vertical slice:
 8. URL ingestion: done.
 9. Article relevance, duplicate handling, and extraction failure reporting: done.
 10. Minimal UI over the stable API response: done.
-11. Next: UI polish, API error states, and evaluation summary visibility.
+11. Next: ticker-centered analysis history in the UI/API.
+12. Then UI polish, API error states, and evaluation summary visibility.
 
 ## Escalation Triggers
 

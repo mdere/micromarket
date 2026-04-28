@@ -1,6 +1,6 @@
 # micromarket Current State
 
-Last updated: 2026-04-26
+Last updated: 2026-04-28
 
 ## Purpose
 
@@ -84,6 +84,11 @@ The product is research-only decision support. It should not issue direct buy/se
   - Users can submit a ticker with manual article text, a URL, or both.
   - The page renders primary forecast, sentiment aggregate, market quote, evidence metadata, limitations, and recent analyses.
   - UI language remains research-only and avoids buy/sell/hold advice.
+- Product/UI decision added on 2026-04-28:
+  - Analysis history should be grouped by ticker.
+  - A ticker should behave like the durable workspace for repeated research runs.
+  - Example: if AMD is analyzed 20 times with different articles, the user should be able to navigate to AMD and review all AMD analyses, submitted articles, evidence decisions, forecasts, sentiment, limitations, and later evaluation outcomes.
+  - This is not a watchlist/multi-ticker batch feature; MVP remains one user-triggered ticker analysis at a time.
 
 ## Decisions From Questionnaire
 
@@ -91,6 +96,7 @@ The product is research-only decision support. It should not issue direct buy/se
 
 - v1 market scope: US equities + ETFs.
 - MVP interaction model: one ticker at a time.
+- Repeated analysis runs should be organized under the same ticker in the UI.
 - Architecture should allow later watchlist/multi-ticker support without major refactor.
 - Product is personal use first, not SaaS.
 - Target runtime: home server first, possible AWS/S3/archive usage later.
@@ -132,6 +138,7 @@ The product is research-only decision support. It should not issue direct buy/se
 ### User Experience
 
 - Dashboard should prioritize forecast first, then sentiment and article evidence.
+- Dashboard navigation should make ticker history first-class: select or search a ticker, then review its analysis timeline and article evidence.
 - Market metrics, risk warnings, and snapshots can be post-MVP or secondary.
 - Avoid direct "buy", "sell", or "hold" commands in MVP.
 - Need confidence-backed research output that helps judge whether to invest.
@@ -221,7 +228,8 @@ The current work is implementing the first backend vertical slice:
 11. Article relevance, duplicate handling, and extraction failure reporting are in place.
 12. Minimal UI over the stable API response is in place in the working tree.
 13. Next: broaden validation with frontend checks and commit the completed UI slice.
-14. Then polish analysis UX, API error states, and evaluation summary visibility.
+14. Then refactor the UI/API flow around ticker-centered analysis history.
+15. Then polish API error states and evaluation summary visibility.
 
 ## Suggested Recommendation To Explore Next
 
@@ -237,6 +245,7 @@ The current recommended architecture is:
 - Primary forecast horizon: 3 trading days.
 - Also store next-close and 7-trading-day forecasts for later evaluation.
 - Start market data with `yfinance` behind a provider interface.
+- Treat ticker-centered history as the next UI shape: one ticker page/workspace should list all analyses and articles for that ticker before watchlists or batch workflows are introduced.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -261,4 +270,14 @@ When resuming:
 10. Run lint with `cd services/api && source .venv/bin/activate && python -m ruff check app tests`.
 11. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
-13. Continue with UI polish, API error states, and evaluation summary visibility.
+13. Validate and commit the current minimal UI slice if it is still uncommitted.
+14. Add or adapt backend list endpoints so the web app can fetch analyses by ticker without loading unrelated runs.
+15. Refactor the web dashboard from a flat recent-analysis list into a ticker-centered workspace:
+   - ticker search/selection,
+   - selected ticker summary,
+   - analysis timeline for that ticker,
+   - article/evidence history for that ticker,
+   - selected analysis detail.
+16. Keep the UI research-only and avoid buy/sell/hold language.
+17. Update tests and docs after the ticker-history implementation lands.
+18. Continue with API error states and evaluation summary visibility.

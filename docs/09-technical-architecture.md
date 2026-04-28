@@ -127,6 +127,7 @@ Responsibilities:
 - Store structured data.
 - Preserve run lineage and model versions.
 - Enable retrospective evaluation.
+- Support ticker-centered analysis history for repeated runs on the same asset.
 - Support future watchlist/multi-ticker expansion.
 
 ### Local Filesystem Storage
@@ -194,6 +195,11 @@ Structured database rows should point to artifact paths rather than storing larg
 
 - `GET /analyses`
   - Lists recent analyses.
+  - Should support filtering by ticker/asset so the UI can load one ticker's analysis timeline without unrelated runs.
+
+- `GET /tickers/{symbol}/analyses`
+  - Optional clearer route for ticker-centered history if it fits the implementation better than query filtering.
+  - Returns all analysis summaries for the selected ticker, newest first, with article counts and enough metadata for timeline navigation.
 
 ### Articles
 

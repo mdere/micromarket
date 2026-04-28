@@ -4,6 +4,8 @@
 
 Build a local-first end-to-end system that accepts a ticker and article evidence, scores sentiment, generates a confidence-oriented 3-trading-day forecast, stores all run lineage, and supports later forecast evaluation.
 
+The MVP should keep analysis execution one ticker at a time while organizing history by ticker. A ticker acts as the durable research workspace for repeated runs, articles, evidence decisions, forecasts, sentiment, limitations, and later evaluation outcomes.
+
 ## Phase 0: Project Setup
 
 Deliverables:
@@ -156,6 +158,7 @@ Acceptance criteria:
 Deliverables:
 
 - Ticker input.
+- Ticker-centered history view.
 - Manual article text form.
 - URL input form.
 - Analysis result page.
@@ -163,11 +166,14 @@ Deliverables:
 - Sentiment summary.
 - Evidence article list.
 - Limitations panel.
-- Basic recent analyses list.
+- Analysis timeline scoped to the selected ticker.
+- Article/evidence history scoped to the selected ticker.
 
 Acceptance criteria:
 
 - User can run a complete analysis from the browser.
+- User can select a ticker such as AMD and see all analysis runs previously created for AMD.
+- User can inspect which articles were analyzed for that ticker and which analysis runs used each article.
 - UI displays forecast, confidence, sentiment, and evidence.
 - UI avoids direct buy/sell/hold instructions.
 - Limitations appear with every forecast.
@@ -216,6 +222,7 @@ Only after this works should the UI and URL ingestion expand.
 9. Minimal Next.js UI.
 10. URL ingestion.
 11. Evaluation refresh.
+12. Ticker-centered analysis history.
 
 ## Risks
 
@@ -257,6 +264,7 @@ MVP is done when:
 
 - Local app runs end-to-end.
 - User can analyze one ticker with manual text and pasted URL evidence.
+- User can revisit prior analyses grouped by ticker.
 - System produces sentiment, forecast, confidence, and limitations.
 - Forecast records are stored with model version and horizon.
 - Evaluation refresh can compare expired forecasts to actual outcomes.

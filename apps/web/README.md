@@ -21,3 +21,8 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
 The first UI slice supports creating analyses from manual article text or a URL,
 selecting recent analyses, and viewing forecast, sentiment, market quote,
 evidence, and limitation metadata.
+
+Next UI direction: refactor the flat recent-analysis experience into
+ticker-centered history. A selected ticker, such as AMD, should show all prior
+AMD analysis runs and the articles/evidence used across those runs while
+keeping every individual analysis traceable.

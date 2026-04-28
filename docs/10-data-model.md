@@ -79,6 +79,8 @@ Fields:
 Notes:
 
 - This is the top-level object the UI should render.
+- The UI should group many `analyses` records under the same `asset_id`/ticker so repeated runs for AMD, SPY, or another symbol form a ticker research history.
+- Analysis records remain immutable run lineage; ticker grouping is a read/navigation pattern, not a replacement for analysis-level records.
 
 ## `articles`
 
@@ -106,6 +108,7 @@ Notes:
 
 - `content_hash` supports duplicate detection.
 - Large raw text should live in artifact storage.
+- Articles are asset-scoped so the UI can show article/evidence history for a ticker across multiple analysis runs.
 
 ## `analysis_articles`
 
@@ -120,6 +123,11 @@ Fields:
 - `duplicate_group_id`
 - `included_in_forecast`
 - `exclusion_reason`
+
+Notes:
+
+- This table is the source of truth for which articles participated in which analysis runs.
+- Ticker history views should use this relationship to show repeated article usage, duplicate handling, relevance decisions, and excluded evidence across runs for the same asset.
 
 ## `sentiment_runs`
 

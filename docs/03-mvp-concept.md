@@ -24,6 +24,7 @@ Investors have to manually read many articles, judge sentiment, compare market m
 - Forecast direction and percent movement range for one defined horizon.
 - Confidence score and risk flags.
 - Evidence panel showing articles and top sentiment drivers.
+- Ticker-centered analysis history for repeated research runs.
 - Save research snapshot.
 - Basic snapshot history for the selected ticker.
 - Clear financial-risk disclaimer.
@@ -33,6 +34,7 @@ Investors have to manually read many articles, judge sentiment, compare market m
 - Automated trading.
 - Personalized portfolio advice.
 - Multi-ticker portfolio optimization.
+- Watchlist or batch analysis workflows.
 - Real-time streaming news.
 - Paid broker integration.
 - Options, crypto, forex, or non-US markets.
