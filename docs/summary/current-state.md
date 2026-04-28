@@ -90,12 +90,15 @@ The product is research-only decision support. It should not issue direct buy/se
   - A ticker should behave like the durable workspace for repeated research runs.
   - Example: if AMD is analyzed 20 times with different articles, the user should be able to navigate to AMD and review all AMD analyses, submitted articles, evidence decisions, forecasts, sentiment, limitations, and later evaluation outcomes.
   - This is not a watchlist/multi-ticker batch feature; MVP remains one user-triggered ticker analysis at a time.
-- Ticker-centered history slice is implemented in the working tree:
+- Ticker-centered history slice is implemented:
   - `GET /analyses` accepts an optional `ticker` query parameter.
   - Analysis responses include `created_at` and `completed_at` timestamps for timeline display.
   - The web dashboard now loads a selected ticker workspace, renders a ticker-scoped analysis timeline, and shows selected-run evidence plus ticker-level article history.
   - Article titles link to source URLs when a URL is available.
   - Tests cover ticker-filtered analysis listing.
+- UI error/evaluation visibility slice is implemented in the working tree:
+  - The dashboard shows persistent notices for API load failures, failed analyses, and evidence excluded from sentiment/forecast inputs.
+  - The dashboard reads `GET /evaluations/summary` and renders a model-monitoring panel with horizon-level evaluated forecast counts, directional accuracy, model mean error, and baseline mean error.
 
 ## Decisions From Questionnaire
 
@@ -234,9 +237,9 @@ The current work is implementing the first backend vertical slice:
 10. URL ingestion over the stable analysis/evaluation backbone is in place.
 11. Article relevance, duplicate handling, and extraction failure reporting are in place.
 12. Minimal UI over the stable API response is in place.
-13. Ticker-centered analysis history is implemented in the working tree.
-14. Next: validate and commit the ticker-centered history slice.
-15. Then polish API error states and evaluation summary visibility.
+13. Ticker-centered analysis history is implemented.
+14. UI error states and evaluation summary visibility are implemented in the working tree.
+15. Next: validate and commit the UI error/evaluation visibility slice.
 
 ## Suggested Recommendation To Explore Next
 
@@ -278,5 +281,6 @@ When resuming:
 11. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
 13. Validate and commit the ticker-centered history slice if it is still uncommitted.
-14. Continue with API error states and evaluation summary visibility.
-15. Keep the UI research-only and avoid buy/sell/hold language.
+14. Validate and commit the UI error/evaluation visibility slice if it is still uncommitted.
+15. Continue with UI polish around loading states and evaluation refresh controls.
+16. Keep the UI research-only and avoid buy/sell/hold language.

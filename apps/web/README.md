@@ -21,7 +21,9 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
 The dashboard supports creating analyses from manual article text or a URL,
 loading a selected ticker workspace, selecting prior analyses for that ticker,
 and viewing forecast, sentiment, market quote, evidence, and limitation
-metadata. Article rows link back to the source URL when one is available.
+metadata. Article rows link back to the source URL when one is available. The
+dashboard also shows persistent API/evidence notices and a model-monitoring
+summary from `GET /evaluations/summary`.
 
 Ticker-centered history is the active UI shape. A selected ticker, such as AMD,
 shows prior AMD analysis runs and the articles/evidence used across those runs

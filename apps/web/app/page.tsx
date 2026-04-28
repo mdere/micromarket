@@ -72,6 +72,19 @@ type AnalysisResponse = {
   forecast_runs: ForecastRunResponse[];
 };
 
+type EvaluationHorizonSummary = {
+  horizon: string;
+  evaluated_forecasts: number;
+  directional_accuracy: string | null;
+  mean_absolute_error: string | null;
+  baseline_mean_absolute_error: string | null;
+};
+
+type EvaluationSummaryResponse = {
+  evaluated_forecasts: number;
+  by_horizon: EvaluationHorizonSummary[];
+};
+
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export default function Home() {
@@ -82,7 +95,13 @@ export default function Home() {
   const [activeAnalysis, setActiveAnalysis] = useState<AnalysisResponse | null>(null);
   const [tickerAnalyses, setTickerAnalyses] = useState<AnalysisResponse[]>([]);
   const [recentAnalyses, setRecentAnalyses] = useState<AnalysisResponse[]>([]);
+  const [evaluationSummary, setEvaluationSummary] = useState<EvaluationSummaryResponse | null>(
+    null
+  );
   const [statusMessage, setStatusMessage] = useState("Ready");
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const primaryForecast = useMemo(() => {
@@ -125,16 +144,34 @@ export default function Home() {
     return Array.from(articles.values());
   }, [tickerAnalyses]);
 
+  const excludedEvidenceCount = useMemo(() => {
+    return activeAnalysis?.articles.filter((article) => !article.included_in_forecast).length ?? 0;
+  }, [activeAnalysis]);
+
   async function loadRecentAnalyses() {
     try {
       const response = await fetch(`${apiBaseUrl}/analyses`, { cache: "no-store" });
       if (!response.ok) {
-        setStatusMessage(`Recent analyses unavailable (${response.status})`);
+        setWorkspaceError(`Recent analyses unavailable (${response.status}).`);
         return;
       }
       setRecentAnalyses((await response.json()) as AnalysisResponse[]);
     } catch {
-      setStatusMessage("API not reachable");
+      setWorkspaceError("API not reachable while loading recent analyses.");
+    }
+  }
+
+  async function loadEvaluationSummary() {
+    setEvaluationError(null);
+    try {
+      const response = await fetch(`${apiBaseUrl}/evaluations/summary`, { cache: "no-store" });
+      if (!response.ok) {
+        setEvaluationError(`Evaluation summary unavailable (${response.status}).`);
+        return;
+      }
+      setEvaluationSummary((await response.json()) as EvaluationSummaryResponse);
+    } catch {
+      setEvaluationError("API not reachable while loading evaluation summary.");
     }
   }
 
@@ -145,6 +182,7 @@ export default function Home() {
       return;
     }
 
+    setWorkspaceError(null);
     setSelectedTicker(normalized);
     setTickerInput(normalized);
     setStatusMessage(`Loading ${normalized} history`);
@@ -153,7 +191,7 @@ export default function Home() {
         cache: "no-store"
       });
       if (!response.ok) {
-        setStatusMessage(`${normalized} history unavailable (${response.status})`);
+        setWorkspaceError(`${normalized} history unavailable (${response.status}).`);
         return;
       }
       const analyses = (await response.json()) as AnalysisResponse[];
@@ -164,13 +202,14 @@ export default function Home() {
         analyses.length ? `${normalized} history loaded` : `${normalized} workspace ready`
       );
     } catch {
-      setStatusMessage("API not reachable");
+      setWorkspaceError("API not reachable while loading ticker history.");
     }
   }
 
   useEffect(() => {
     void loadRecentAnalyses();
     void loadTickerWorkspace(selectedTicker);
+    void loadEvaluationSummary();
   }, []);
 
   async function handleWorkspaceSubmit(event: FormEvent<HTMLFormElement>) {
@@ -193,14 +232,15 @@ export default function Home() {
       articles.push({ url: articleUrl.trim() });
     }
     if (!ticker) {
-      setStatusMessage("Enter a ticker before running an analysis.");
+      setAnalysisError("Enter a ticker before running an analysis.");
       return;
     }
     if (articles.length === 0) {
-      setStatusMessage("Add manual text or a URL before running an analysis.");
+      setAnalysisError("Add manual text or a URL before running an analysis.");
       return;
     }
 
+    setAnalysisError(null);
     setIsSubmitting(true);
     setStatusMessage(`Running ${ticker} analysis`);
     try {
@@ -214,7 +254,8 @@ export default function Home() {
       });
       const body = await response.json();
       if (!response.ok) {
-        setStatusMessage(body.detail ?? `Analysis failed (${response.status})`);
+        setAnalysisError(body.detail ?? `Analysis failed (${response.status}).`);
+        await loadTickerWorkspace(ticker);
         return;
       }
       const analysis = body as AnalysisResponse;
@@ -223,25 +264,27 @@ export default function Home() {
       setStatusMessage("Analysis completed");
       await loadRecentAnalyses();
       await loadTickerWorkspace(analysis.ticker, analysis.id);
+      await loadEvaluationSummary();
     } catch {
-      setStatusMessage("API not reachable");
+      setAnalysisError("API not reachable while running analysis.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function selectAnalysis(analysisId: string) {
+    setWorkspaceError(null);
     setStatusMessage("Loading analysis");
     try {
       const response = await fetch(`${apiBaseUrl}/analyses/${analysisId}`, { cache: "no-store" });
       if (!response.ok) {
-        setStatusMessage(`Analysis unavailable (${response.status})`);
+        setWorkspaceError(`Analysis unavailable (${response.status}).`);
         return;
       }
       setActiveAnalysis((await response.json()) as AnalysisResponse);
       setStatusMessage("Analysis loaded");
     } catch {
-      setStatusMessage("API not reachable");
+      setWorkspaceError("API not reachable while loading analysis.");
     }
   }
 
@@ -313,10 +356,32 @@ export default function Home() {
             <button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Running" : "Run Analysis"}
             </button>
+            {analysisError ? <p className="error-text">{analysisError}</p> : null}
           </form>
         </aside>
 
         <section className="main-panel">
+          {workspaceError ? (
+            <section className="notice-panel error" aria-live="polite">
+              {workspaceError}
+            </section>
+          ) : null}
+
+          {activeAnalysis?.status === "failed" ? (
+            <section className="notice-panel error" aria-live="polite">
+              This analysis failed during processing. Its lineage is still visible, but forecast and
+              sentiment outputs may be incomplete.
+            </section>
+          ) : null}
+
+          {excludedEvidenceCount > 0 ? (
+            <section className="notice-panel warning" aria-live="polite">
+              {excludedEvidenceCount} article{excludedEvidenceCount === 1 ? "" : "s"} in the
+              selected run {excludedEvidenceCount === 1 ? "was" : "were"} preserved for lineage but
+              excluded from sentiment and forecast inputs.
+            </section>
+          ) : null}
+
           <section className="summary-strip">
             <Metric label="Ticker" value={selectedTicker} />
             <Metric label="Runs" value={String(tickerAnalyses.length)} />
@@ -428,6 +493,32 @@ export default function Home() {
                 />
               </div>
             </section>
+          </section>
+
+          <section className="panel">
+            <div className="section-heading">
+              <h2>Evaluation Monitor</h2>
+              <span>{evaluationSummary?.evaluated_forecasts ?? 0} evaluated forecasts</span>
+            </div>
+            {evaluationError ? <p className="error-text">{evaluationError}</p> : null}
+            {evaluationSummary?.by_horizon.length ? (
+              <div className="evaluation-grid">
+                {evaluationSummary.by_horizon.map((summary) => (
+                  <article className="evaluation-row" key={summary.horizon}>
+                    <strong>{summary.horizon.replaceAll("_", " ")}</strong>
+                    <span>{summary.evaluated_forecasts} forecasts</span>
+                    <span>{formatAccuracy(summary.directional_accuracy)} accuracy</span>
+                    <span>{formatPercent(summary.mean_absolute_error)} mean error</span>
+                    <span>{formatPercent(summary.baseline_mean_absolute_error)} baseline error</span>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="muted-text">
+                No evaluated forecasts yet. Run evaluation refresh after forecast horizons expire to
+                populate model monitoring.
+              </p>
+            )}
           </section>
 
           <section className="panel">
@@ -556,6 +647,13 @@ function formatPercent(value?: string | null) {
     return "None";
   }
   return `${Number(value).toFixed(2)}%`;
+}
+
+function formatAccuracy(value?: string | null) {
+  if (!value) {
+    return "None";
+  }
+  return `${(Number(value) * 100).toFixed(0)}%`;
 }
 
 function formatScore(value?: string | null) {
