@@ -50,6 +50,15 @@ class BaselineForecastProvider:
             feature_snapshot={
                 "ticker": forecast_input.ticker,
                 "quote_provider": forecast_input.quote_provider,
+                "analysis_as_of": self._datetime_to_str(forecast_input.analysis_as_of),
+                "feature_window_start_time": self._datetime_to_str(
+                    forecast_input.feature_window_start_time
+                ),
+                "feature_window_end_time": self._datetime_to_str(
+                    forecast_input.feature_window_end_time
+                ),
+                "market_lookback_days": forecast_input.market_lookback_days,
+                "stored_price_count": forecast_input.stored_price_count,
                 "current_price": self._decimal_to_str(forecast_input.current_price),
                 "previous_close": self._decimal_to_str(forecast_input.previous_close),
                 "sentiment_score": self._decimal_to_str(forecast_input.sentiment_score),
@@ -67,8 +76,12 @@ class BaselineForecastProvider:
             model_name=self.model_name,
             model_version=self.model_version,
             target_start_price=forecast_input.current_price,
-            target_start_time=forecast_input.quote_time,
-            target_end_time=self._target_end_time(forecast_input.quote_time, horizon),
+            target_start_time=forecast_input.analysis_as_of or forecast_input.quote_time,
+            target_end_time=self._target_end_time(
+                forecast_input.analysis_as_of or forecast_input.quote_time, horizon
+            ),
+            feature_window_start_time=forecast_input.feature_window_start_time,
+            feature_window_end_time=forecast_input.feature_window_end_time,
         )
 
     def _momentum_percent(self, forecast_input: ForecastInput) -> Decimal | None:
@@ -161,3 +174,8 @@ class BaselineForecastProvider:
         if value is None:
             return None
         return str(value)
+
+    def _datetime_to_str(self, value: datetime | None) -> str | None:
+        if value is None:
+            return None
+        return value.isoformat()

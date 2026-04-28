@@ -172,7 +172,8 @@ Continue the first backend vertical slice:
 16. Model-quality plan and sentiment provider direction: documented.
 17. Analysis as-of time and historical replay direction: documented.
 18. Ticker context ingestion direction: documented.
-19. Next: implement ticker onboarding, market-history backfill, related-entity extraction, and as-of-time alignment before expanding sentiment provider complexity.
+19. Ticker onboarding, market-history backfill, and as-of-time alignment: in progress.
+20. Next: related-entity extraction before expanding sentiment provider complexity.
 
 ## Escalation Triggers
 

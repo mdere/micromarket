@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -24,6 +25,7 @@ from app.ingestion.evidence import ArticleEvidencePolicy
 from app.ingestion.service import ArticleIngestionService, NormalizedArticle
 from app.ingestion.url_provider import URLExtractionError, URLExtractionProvider
 from app.market_data.dependencies import get_market_data_provider
+from app.market_data.history import ensure_market_history
 from app.market_data.provider import MarketDataProvider
 from app.market_data.yfinance_provider import MarketDataProviderError
 from app.schemas.analysis import AnalysisCreate, AnalysisResponse, ArticleInput
@@ -64,11 +66,14 @@ def create_analysis(
         db.flush()
 
     input_mode = _input_mode(article_inputs)
+    preliminary_as_of, as_of_source = _resolve_analysis_as_of(payload, article_inputs)
     analysis = Analysis(
         asset_id=asset.id,
         status="running",
         primary_horizon=payload.primary_horizon,
         input_mode=input_mode,
+        analysis_as_of=preliminary_as_of,
+        analysis_as_of_source=as_of_source,
         limitations=[
             "Research-only output; not financial advice.",
             "URL extraction quality varies by publisher and page structure.",
@@ -84,6 +89,32 @@ def create_analysis(
         analysis.error_message = str(exc)
         db.commit()
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    if analysis.analysis_as_of_source == "live":
+        analysis.analysis_as_of = quote.quote_time or preliminary_as_of
+
+    try:
+        market_history = ensure_market_history(
+            db=db,
+            asset=asset,
+            ticker=ticker,
+            provider=market_data_provider,
+            analysis_as_of=analysis.analysis_as_of or preliminary_as_of,
+            lookback_days=settings.market_lookback_days,
+        )
+    except MarketDataProviderError as exc:
+        analysis.status = "failed"
+        analysis.error_message = str(exc)
+        db.commit()
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    forecast_price = quote.price
+    forecast_previous_close = quote.previous_close
+    forecast_quote_time = quote.quote_time
+    if analysis.analysis_as_of_source != "live":
+        forecast_price = market_history.target_start_price
+        forecast_previous_close = market_history.previous_close
+        forecast_quote_time = analysis.analysis_as_of
 
     market_quote = MarketQuote(
         asset_id=asset.id,
@@ -134,6 +165,9 @@ def create_analysis(
             title=normalized.title,
             source=normalized.source,
             url=normalized.url,
+            published_at=_ensure_utc(article_input.published_at)
+            if article_input.published_at is not None
+            else None,
             input_type=input_type,
             raw_artifact_path=raw_artifact_path,
             extracted_text_artifact_path=extracted_artifact_path,
@@ -192,14 +226,19 @@ def create_analysis(
         ForecastInput(
             ticker=ticker,
             quote_provider=market_quote.provider,
-            current_price=market_quote.price,
-            previous_close=market_quote.previous_close,
-            quote_time=market_quote.quote_time,
+            analysis_as_of=analysis.analysis_as_of,
+            current_price=forecast_price,
+            previous_close=forecast_previous_close,
+            quote_time=forecast_quote_time,
+            feature_window_start_time=market_history.feature_window_start_time,
+            feature_window_end_time=market_history.feature_window_end_time,
             sentiment_score=sentiment_aggregate.aggregate_score,
             agreement_score=sentiment_aggregate.agreement_score,
             evidence_strength_score=sentiment_aggregate.evidence_strength_score,
             article_count=sentiment_aggregate.article_count,
             included_article_count=sentiment_aggregate.included_article_count,
+            market_lookback_days=market_history.lookback_days,
+            stored_price_count=market_history.stored_price_count,
         )
     ):
         db.add(
@@ -221,6 +260,8 @@ def create_analysis(
                 target_start_price=forecast.target_start_price,
                 target_start_time=forecast.target_start_time,
                 target_end_time=forecast.target_end_time,
+                feature_window_start_time=forecast.feature_window_start_time,
+                feature_window_end_time=forecast.feature_window_end_time,
             )
         )
 
@@ -292,6 +333,8 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
         status=analysis.status,
         primary_horizon=analysis.primary_horizon,
         input_mode=analysis.input_mode,
+        analysis_as_of=_datetime_to_str(analysis.analysis_as_of),
+        analysis_as_of_source=analysis.analysis_as_of_source,
         created_at=_datetime_to_str(analysis.created_at) or "",
         completed_at=_datetime_to_str(analysis.completed_at),
         error_message=analysis.error_message,
@@ -303,6 +346,7 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
                 "title": article.title,
                 "source": article.source,
                 "url": article.url,
+                "published_at": _datetime_to_str(article.published_at),
                 "input_type": article.input_type,
                 "content_hash": article.content_hash,
                 "word_count": article.word_count,
@@ -341,6 +385,7 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
             if market_quote is not None
             else None
         ),
+        ticker_context=_ticker_context_response(analysis),
         sentiment_runs=[
             {
                 "id": run.id,
@@ -393,6 +438,8 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
                 "target_start_price": _decimal_to_str(run.target_start_price),
                 "target_start_time": _datetime_to_str(run.target_start_time),
                 "target_end_time": _datetime_to_str(run.target_end_time),
+                "feature_window_start_time": _datetime_to_str(run.feature_window_start_time),
+                "feature_window_end_time": _datetime_to_str(run.feature_window_end_time),
             }
             for run in sorted(analysis.forecast_runs, key=lambda item: item.horizon)
         ],
@@ -401,7 +448,9 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
 
 def _input_mode(article_inputs: list[ArticleInput]) -> str:
     has_text = any(article.text and article.text.strip() for article in article_inputs)
-    has_url = any(article.url and article.url.strip() and not article.text for article in article_inputs)
+    has_url = any(
+        article.url and article.url.strip() and not article.text for article in article_inputs
+    )
     if has_text and has_url:
         return "mixed"
     if has_url:
@@ -440,6 +489,41 @@ def _prepare_article(
     return normalized, "url", raw_artifact_path, extracted_artifact_path
 
 
+def _resolve_analysis_as_of(
+    payload: AnalysisCreate,
+    article_inputs: list[ArticleInput],
+) -> tuple[datetime, str]:
+    if payload.analysis_as_of is not None:
+        return _ensure_utc(payload.analysis_as_of), "manual_historical"
+    published_dates = [
+        _ensure_utc(article.published_at)
+        for article in article_inputs
+        if article.published_at is not None
+    ]
+    if published_dates:
+        return max(published_dates), "article_published_at"
+    return utc_now(), "live"
+
+
+def _ensure_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _ticker_context_response(analysis: Analysis) -> dict[str, object] | None:
+    if not analysis.forecast_runs:
+        return None
+    snapshot = analysis.forecast_runs[0].feature_snapshot or {}
+    return {
+        "provider": snapshot.get("quote_provider") or "unknown",
+        "lookback_days": snapshot.get("market_lookback_days") or 0,
+        "history_start_date": snapshot.get("feature_window_start_time"),
+        "history_end_date": snapshot.get("feature_window_end_time"),
+        "stored_price_count": snapshot.get("stored_price_count") or 0,
+    }
+
+
 def _decimal_to_str(value: object | None) -> str | None:
     if value is None:
         return None
@@ -449,6 +533,8 @@ def _decimal_to_str(value: object | None) -> str | None:
 def _datetime_to_str(value: object | None) -> str | None:
     if value is None:
         return None
+    if isinstance(value, datetime) and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc).isoformat()
     if hasattr(value, "isoformat"):
         return value.isoformat()
     return str(value)

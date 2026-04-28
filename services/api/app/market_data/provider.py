@@ -33,9 +33,26 @@ class MarketClose:
     provider: str = "unknown"
 
 
+@dataclass(frozen=True)
+class MarketPrice:
+    ticker: str
+    price_date: date
+    open: Decimal | None
+    high: Decimal | None
+    low: Decimal | None
+    close: Decimal | None
+    adjusted_close: Decimal | None = None
+    volume: int | None = None
+    provider: str = "unknown"
+    raw_payload: dict | None = None
+
+
 class MarketDataProvider(Protocol):
     def get_quote(self, ticker: str) -> MarketQuote:
         """Return a market quote for a ticker."""
 
     def get_close_on_or_after(self, ticker: str, target_date: date) -> MarketClose:
         """Return the first available daily close on or after target_date."""
+
+    def get_price_history(self, ticker: str, start: date, end: date) -> list[MarketPrice]:
+        """Return daily market prices between start and end, inclusive where available."""

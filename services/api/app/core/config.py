@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     )
     artifact_root: str = Field(default="./data", alias="ARTIFACT_ROOT")
     cors_origins_raw: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
+    market_lookback_days: int = Field(default=30, alias="MARKET_LOOKBACK_DAYS")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

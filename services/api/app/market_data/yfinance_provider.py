@@ -4,7 +4,7 @@ from typing import Any
 
 import yfinance as yf
 
-from app.market_data.provider import MarketClose, MarketQuote
+from app.market_data.provider import MarketClose, MarketPrice, MarketQuote
 
 
 class MarketDataProviderError(RuntimeError):
@@ -139,6 +139,60 @@ class YFinanceMarketDataProvider:
             f"Historical data for {symbol} did not include a usable close price."
         )
 
+    def get_price_history(self, ticker: str, start: date, end: date) -> list[MarketPrice]:
+        symbol = ticker.upper().strip()
+        if end < start:
+            return []
+
+        yf_ticker = yf.Ticker(symbol)
+        history = yf_ticker.history(
+            start=start.isoformat(),
+            end=(end + timedelta(days=1)).isoformat(),
+            interval="1d",
+            auto_adjust=False,
+        )
+
+        if history.empty:
+            raise MarketDataProviderError(
+                f"No historical prices returned for {symbol} between {start} and {end}."
+            )
+
+        prices: list[MarketPrice] = []
+        for index, row in history.iterrows():
+            price_time = self._to_datetime(index)
+            if price_time is None:
+                continue
+            close = self._decimal(row.get("Close"))
+            if close is None:
+                continue
+            prices.append(
+                MarketPrice(
+                    ticker=symbol,
+                    price_date=price_time.date(),
+                    open=self._decimal(row.get("Open")),
+                    high=self._decimal(row.get("High")),
+                    low=self._decimal(row.get("Low")),
+                    close=close,
+                    adjusted_close=self._decimal(row.get("Adj Close")),
+                    volume=self._integer(row.get("Volume")),
+                    provider=self.provider_name,
+                    raw_payload={
+                        "open": self._safe_raw_value(row.get("Open")),
+                        "high": self._safe_raw_value(row.get("High")),
+                        "low": self._safe_raw_value(row.get("Low")),
+                        "close": self._safe_raw_value(row.get("Close")),
+                        "adjusted_close": self._safe_raw_value(row.get("Adj Close")),
+                        "volume": self._safe_raw_value(row.get("Volume")),
+                    },
+                )
+            )
+
+        if not prices:
+            raise MarketDataProviderError(
+                f"Historical prices for {symbol} did not include usable close values."
+            )
+        return prices
+
     def _safe_info(self, yf_ticker: yf.Ticker) -> dict[str, Any]:
         try:
             return dict(yf_ticker.info or {})
@@ -214,3 +268,13 @@ class YFinanceMarketDataProvider:
             "trailingPE",
         ]
         return {key: info[key] for key in keys if key in info}
+
+    def _safe_raw_value(self, value: Any) -> Any | None:
+        if value is None:
+            return None
+        if hasattr(value, "item"):
+            try:
+                return value.item()
+            except Exception:
+                return str(value)
+        return value

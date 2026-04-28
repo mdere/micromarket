@@ -185,6 +185,12 @@ Fields:
 4. Store feature-window metadata on forecast runs.
 5. Add tests with fake market data providers for complete, partial, and missing historical windows.
 
+Implementation status:
+
+- `market_price_history`, `ticker_contexts`, `analysis_as_of`, and forecast feature-window fields are implemented.
+- Analysis creation now backfills market history and uses article `published_at` as the historical decision point when supplied.
+- Related-entity extraction is still pending and should be the next slice.
+
 ## Second Implementation Slice
 
 1. Add deterministic entity extraction.

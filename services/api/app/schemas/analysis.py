@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -6,11 +8,13 @@ class ArticleInput(BaseModel):
     source: str | None = None
     url: str | None = None
     text: str | None = None
+    published_at: datetime | None = None
 
 
 class AnalysisCreate(BaseModel):
     ticker: str = Field(min_length=1, max_length=16)
     primary_horizon: str = "3_trading_days"
+    analysis_as_of: datetime | None = None
     articles: list[ArticleInput] = Field(default_factory=list)
 
 
@@ -19,6 +23,7 @@ class ArticleResponse(BaseModel):
     title: str | None
     source: str | None
     url: str | None
+    published_at: str | None = None
     input_type: str
     content_hash: str
     word_count: int
@@ -41,6 +46,14 @@ class MarketQuoteResponse(BaseModel):
     market_cap: int | None
     quote_time: str | None
     retrieved_at: str
+
+
+class TickerContextResponse(BaseModel):
+    provider: str
+    lookback_days: int
+    history_start_date: str | None
+    history_end_date: str | None
+    stored_price_count: int
 
 
 class SentimentRunResponse(BaseModel):
@@ -87,6 +100,8 @@ class ForecastRunResponse(BaseModel):
     target_start_price: str | None
     target_start_time: str | None
     target_end_time: str | None
+    feature_window_start_time: str | None = None
+    feature_window_end_time: str | None = None
 
 
 class AnalysisResponse(BaseModel):
@@ -95,6 +110,8 @@ class AnalysisResponse(BaseModel):
     status: str
     primary_horizon: str
     input_mode: str = "manual_text"
+    analysis_as_of: str | None = None
+    analysis_as_of_source: str = "live"
     created_at: str
     completed_at: str | None = None
     error_message: str | None = None
@@ -102,6 +119,7 @@ class AnalysisResponse(BaseModel):
     limitations: list[str] = Field(default_factory=list)
     articles: list[ArticleResponse] = Field(default_factory=list)
     market_quote: MarketQuoteResponse | None = None
+    ticker_context: TickerContextResponse | None = None
     sentiment_runs: list[SentimentRunResponse] = Field(default_factory=list)
     sentiment_aggregate: SentimentAggregateResponse | None = None
     forecast_runs: list[ForecastRunResponse] = Field(default_factory=list)

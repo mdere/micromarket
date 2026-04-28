@@ -11,7 +11,7 @@ from app.db.models import Analysis, Asset, Base, ForecastRun
 from app.db.session import get_db
 from app.main import app
 from app.market_data.dependencies import get_market_data_provider
-from app.market_data.provider import MarketClose, MarketQuote
+from app.market_data.provider import MarketClose, MarketPrice, MarketQuote
 
 
 class FakeEvaluationMarketDataProvider:
@@ -25,6 +25,19 @@ class FakeEvaluationMarketDataProvider:
             close_date=target_date,
             provider="fake-market-data",
         )
+
+    def get_price_history(self, ticker: str, start: date, end: date) -> list[MarketPrice]:
+        return [
+            MarketPrice(
+                ticker=ticker.upper(),
+                price_date=start,
+                open=Decimal("100"),
+                high=Decimal("101"),
+                low=Decimal("99"),
+                close=Decimal("100"),
+                provider="fake-market-data",
+            )
+        ]
 
 
 def build_test_app():

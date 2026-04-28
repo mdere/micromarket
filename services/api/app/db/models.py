@@ -1,8 +1,19 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -35,6 +46,8 @@ class Asset(Base):
 
     analyses: Mapped[list["Analysis"]] = relationship(back_populates="asset")
     articles: Mapped[list["Article"]] = relationship(back_populates="asset")
+    market_price_history: Mapped[list["MarketPriceHistory"]] = relationship(back_populates="asset")
+    ticker_contexts: Mapped[list["TickerContext"]] = relationship(back_populates="asset")
 
 
 class MarketQuote(Base):
@@ -64,6 +77,45 @@ class MarketQuote(Base):
     analysis: Mapped["Analysis | None"] = relationship(back_populates="market_quotes")
 
 
+class MarketPriceHistory(Base):
+    __tablename__ = "market_price_history"
+    __table_args__ = (UniqueConstraint("asset_id", "provider", "price_date"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    asset_id: Mapped[str] = mapped_column(ForeignKey("assets.id"), index=True)
+    provider: Mapped[str] = mapped_column(String(64))
+    price_date: Mapped[date] = mapped_column(Date, index=True)
+    open: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
+    high: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
+    low: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
+    close: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
+    adjusted_close: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
+    volume: Mapped[int | None] = mapped_column(BigInteger)
+    retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    raw_payload_artifact_path: Mapped[str | None] = mapped_column(Text)
+
+    asset: Mapped[Asset] = relationship(back_populates="market_price_history")
+
+
+class TickerContext(Base):
+    __tablename__ = "ticker_contexts"
+    __table_args__ = (UniqueConstraint("asset_id", "provider", "lookback_days"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    asset_id: Mapped[str] = mapped_column(ForeignKey("assets.id"), index=True)
+    lookback_days: Mapped[int] = mapped_column(Integer)
+    history_start_date: Mapped[date | None] = mapped_column(Date)
+    history_end_date: Mapped[date | None] = mapped_column(Date)
+    provider: Mapped[str] = mapped_column(String(64))
+    last_backfilled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    asset: Mapped[Asset] = relationship(back_populates="ticker_contexts")
+
+
 class Analysis(Base):
     __tablename__ = "analyses"
 
@@ -72,6 +124,8 @@ class Analysis(Base):
     status: Mapped[str] = mapped_column(String(32), default="created")
     primary_horizon: Mapped[str] = mapped_column(String(32), default="3_trading_days")
     input_mode: Mapped[str] = mapped_column(String(32), default="manual_text")
+    analysis_as_of: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    analysis_as_of_source: Mapped[str] = mapped_column(String(32), default="live")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_message: Mapped[str | None] = mapped_column(Text)
@@ -196,6 +250,8 @@ class ForecastRun(Base):
     target_start_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 6))
     target_start_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     target_end_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    feature_window_start_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    feature_window_end_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     analysis: Mapped[Analysis] = relationship(back_populates="forecast_runs")
 

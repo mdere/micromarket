@@ -350,6 +350,13 @@ analyzed, the API should store a configurable historical market window, such as
 relationships so later analyses can compare related narratives with market
 movement.
 
+`MARKET_LOOKBACK_DAYS` controls the market-history window used during analysis
+creation and defaults to `30`. `POST /analyses` now resolves `analysis_as_of`,
+stores or refreshes daily market history for the ticker, and includes
+feature-window metadata in forecast responses. If an article provides
+`published_at`, that timestamp becomes the historical decision point unless the
+request explicitly sets `analysis_as_of`.
+
 Ollama is the preferred first local LLM experiment once ticker context,
 as-of-time alignment, and the sentiment fixture set exist.
 It should be added as an optional `OllamaSentimentProvider`, selected by

@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from fastapi.testclient import TestClient
@@ -14,7 +14,7 @@ from app.ingestion.dependencies import get_url_extraction_provider
 from app.ingestion.url_provider import URLExtractionError, URLExtractionResult
 from app.main import app
 from app.market_data.dependencies import get_market_data_provider
-from app.market_data.provider import MarketQuote
+from app.market_data.provider import MarketPrice, MarketQuote
 
 
 class FakeMarketDataProvider:
@@ -31,6 +31,30 @@ class FakeMarketDataProvider:
             provider="fake-market-data",
             market_cap=123000000,
         )
+
+    def get_price_history(self, ticker: str, start: date, end: date) -> list[MarketPrice]:
+        prices: list[MarketPrice] = []
+        current = start
+        index = 0
+        while current <= end:
+            if current.weekday() < 5:
+                close = Decimal("500.000000") + Decimal(index)
+                prices.append(
+                    MarketPrice(
+                        ticker=ticker.upper(),
+                        price_date=current,
+                        open=close - Decimal("1.000000"),
+                        high=close + Decimal("2.000000"),
+                        low=close - Decimal("2.000000"),
+                        close=close,
+                        adjusted_close=close,
+                        volume=1000000 + index,
+                        provider="fake-market-data",
+                    )
+                )
+                index += 1
+            current += timedelta(days=1)
+        return prices
 
 
 class FakeURLExtractionProvider:
@@ -104,6 +128,9 @@ def test_create_and_get_analysis(tmp_path) -> None:
         assert created["ticker"] == "SPY"
         assert created["status"] == "completed"
         assert created["primary_horizon"] == "3_trading_days"
+        assert created["analysis_as_of_source"] == "live"
+        assert created["ticker_context"]["lookback_days"] == 30
+        assert created["ticker_context"]["stored_price_count"] > 0
         assert created["market_quote"]["provider"] == "fake-market-data"
         assert created["market_quote"]["price"] == "512.340000"
         assert created["sentiment_runs"][0]["provider"] == "baseline"
@@ -123,6 +150,8 @@ def test_create_and_get_analysis(tmp_path) -> None:
         assert primary_forecast["predicted_direction"] == "up"
         assert primary_forecast["baseline_direction"] == "flat"
         assert primary_forecast["feature_snapshot"]["included_article_count"] == 1
+        assert primary_forecast["feature_window_start_time"] is not None
+        assert primary_forecast["feature_window_end_time"] is not None
         assert "Research-only forecast" in primary_forecast["limitations"][0]
         assert created["articles"][0]["word_count"] == 10
         artifact_path = created["articles"][0]["raw_artifact_path"]
@@ -187,6 +216,43 @@ def test_create_analysis_with_url_article(tmp_path) -> None:
         assert raw_artifact_path is not None
         assert raw_artifact_path.endswith(".html")
         assert "SPY demand improved" in open(raw_artifact_path, encoding="utf-8").read()
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_create_analysis_with_historical_article_uses_published_at_as_of(tmp_path) -> None:
+    client = build_test_app(tmp_path)
+
+    try:
+        response = client.post(
+            "/analyses",
+            json={
+                "ticker": "AMD",
+                "articles": [
+                    {
+                        "title": "AMD historical article",
+                        "published_at": "2026-03-05T14:30:00Z",
+                        "text": "AMD saw improving demand and resilient AI chip momentum.",
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 201
+        created = response.json()
+        assert created["analysis_as_of"] == "2026-03-05T14:30:00+00:00"
+        assert created["analysis_as_of_source"] == "article_published_at"
+        assert created["articles"][0]["published_at"] == "2026-03-05T14:30:00+00:00"
+        assert created["ticker_context"]["history_end_date"].startswith("2026-03-05")
+
+        primary_forecast = next(
+            run for run in created["forecast_runs"] if run["horizon"] == "3_trading_days"
+        )
+        assert primary_forecast["target_start_time"] == "2026-03-05T14:30:00+00:00"
+        assert primary_forecast["target_start_price"] != created["market_quote"]["price"]
+        assert primary_forecast["feature_snapshot"]["analysis_as_of"] == (
+            "2026-03-05T14:30:00+00:00"
+        )
     finally:
         app.dependency_overrides.clear()
 

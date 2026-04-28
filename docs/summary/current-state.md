@@ -129,6 +129,13 @@ The product is research-only decision support. It should not issue direct buy/se
   - Article ingestion should extract related companies, partners, suppliers, customers, competitors, products, themes, and keywords.
   - Related entities should preserve aliases and evidence snippets, for example normalizing `TSMC`, `Taiwan Semiconductor`, and `TSM`.
   - This foundation should be implemented before expanding sentiment fixtures or optional Ollama providers.
+- Ticker market-history foundation slice is implemented:
+  - `MARKET_LOOKBACK_DAYS` config defaults to 30.
+  - `market_price_history` and `ticker_contexts` are modeled and covered by Alembic revision `20260428_0004`.
+  - `MarketDataProvider` now supports daily price history, with `yfinance` and test fakes implementing the contract.
+  - `POST /analyses` resolves `analysis_as_of`, backfills market history, stores feature-window timestamps, and uses historical close data for historical article forecasts.
+  - API responses expose `analysis_as_of`, `analysis_as_of_source`, ticker context metadata, article `published_at`, and forecast feature-window timestamps.
+  - Entity extraction is not implemented yet and remains the next foundation slice.
 
 ## Decisions From Questionnaire
 
@@ -275,7 +282,8 @@ The current work is implementing the first backend vertical slice:
 18. Model-quality plan is documented.
 19. Historical as-of-time alignment is documented as the next architecture correction.
 20. Ticker context ingestion plan is documented.
-21. Next: implement ticker onboarding, market-history backfill, related-entity extraction, and as-of-time aligned historical replay before expanding sentiment provider complexity.
+21. Ticker onboarding, market-history backfill, and as-of-time aligned historical replay are implemented.
+22. Next: implement related-entity and narrative keyword extraction before expanding sentiment provider complexity.
 
 ## Suggested Recommendation To Explore Next
 
@@ -292,8 +300,8 @@ The current recommended architecture is:
 - Also store next-close and 7-trading-day forecasts for later evaluation.
 - Start market data with `yfinance` behind a provider interface.
 - Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
-- Start model-quality foundation work by adding ticker context first: market-history backfill, `analysis_as_of`, historical market lookbacks, forecast target windows, and related-entity extraction.
-- After that foundation is in place, improve deterministic sentiment fixtures and confidence/driver extraction, then add an optional Ollama sentiment provider behind `SentimentProvider`.
+- Continue model-quality foundation work by adding related-entity extraction next. Market-history backfill, `analysis_as_of`, historical market lookbacks, and forecast target windows are now started in code.
+- After entity extraction is in place, improve deterministic sentiment fixtures and confidence/driver extraction, then add an optional Ollama sentiment provider behind `SentimentProvider`.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -320,9 +328,7 @@ When resuming:
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
 13. Read `docs/13-model-quality-plan.md`.
 14. Read `docs/14-ticker-context-ingestion-plan.md`.
-15. Implement ticker onboarding and configurable market-history backfill.
-16. Implement related-entity and narrative keyword extraction.
-17. Implement analysis `analysis_as_of` semantics and historical market lookback alignment.
-18. Add curated sentiment fixtures and improve the deterministic baseline provider.
-19. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
-20. Keep the UI and model outputs research-only and avoid buy/sell/hold language.
+15. Implement related-entity and narrative keyword extraction.
+16. Add curated sentiment fixtures and improve the deterministic baseline provider.
+17. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
+18. Keep the UI and model outputs research-only and avoid buy/sell/hold language.

@@ -21,6 +21,8 @@ class ForecastResult:
     target_start_price: Decimal | None = None
     target_start_time: datetime | None = None
     target_end_time: datetime | None = None
+    feature_window_start_time: datetime | None = None
+    feature_window_end_time: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -35,6 +37,11 @@ class ForecastInput:
     evidence_strength_score: Decimal | None
     article_count: int
     included_article_count: int
+    analysis_as_of: datetime | None = None
+    feature_window_start_time: datetime | None = None
+    feature_window_end_time: datetime | None = None
+    market_lookback_days: int | None = None
+    stored_price_count: int | None = None
 
 
 class ForecastProvider(Protocol):
