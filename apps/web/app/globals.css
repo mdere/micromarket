@@ -161,11 +161,19 @@ button:disabled {
 }
 
 .analysis-form button,
-.ticker-form button {
+.ticker-form button,
+.secondary-button {
   background: var(--text);
   border: 1px solid var(--text);
   color: white;
   padding: 10px 12px;
+}
+
+.secondary-button {
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
 }
 
 .form-heading,
@@ -373,6 +381,12 @@ button:disabled {
 
 .evaluation-row span {
   color: var(--muted);
+}
+
+.evaluation-errors {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
 }
 
 .body-text {

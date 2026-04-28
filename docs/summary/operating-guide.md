@@ -152,8 +152,9 @@ Continue the first backend vertical slice:
 9. Article relevance, duplicate handling, and extraction failure reporting: done.
 10. Minimal UI over the stable API response: done.
 11. Ticker-centered analysis history in the UI/API: done.
-12. API error states and evaluation summary visibility: in progress.
-13. Next: UI polish around loading states and evaluation refresh controls.
+12. API error states and evaluation summary visibility: done.
+13. Evaluation refresh controls and dashboard component refactor: in progress.
+14. Next: UI polish around panel-level loading states and clearer failed-analysis detail.
 
 ## Escalation Triggers
 

@@ -78,6 +78,7 @@ As of the latest handoff, the backend vertical slice has:
 - article relevance, duplicate handling, and extraction failure reporting,
 - minimal UI over the stable analysis API response,
 - ticker-centered analysis history in the UI/API,
-- API error states and evaluation summary visibility in the UI.
+- API error states and evaluation summary visibility in the UI,
+- evaluation refresh controls and dashboard component structure.
 
-The next major step is UI polish around loading states and evaluation refresh controls.
+The next major step is UI polish around panel-level loading states and clearer failed-analysis detail.

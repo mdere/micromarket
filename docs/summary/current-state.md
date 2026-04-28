@@ -99,6 +99,11 @@ The product is research-only decision support. It should not issue direct buy/se
 - UI error/evaluation visibility slice is implemented in the working tree:
   - The dashboard shows persistent notices for API load failures, failed analyses, and evidence excluded from sentiment/forecast inputs.
   - The dashboard reads `GET /evaluations/summary` and renders a model-monitoring panel with horizon-level evaluated forecast counts, directional accuracy, model mean error, and baseline mean error.
+  - The evaluation monitor can trigger `POST /evaluations/refresh`, show evaluated/skipped counts and provider errors, and reload the summary afterward.
+- Next.js dashboard refactor is implemented in the working tree:
+  - `apps/web/app/page.tsx` now owns state and API orchestration.
+  - Dashboard UI panels live under `apps/web/components/dashboard`.
+  - Shared API response types and formatting helpers live under `apps/web/lib`.
 
 ## Decisions From Questionnaire
 
@@ -238,8 +243,9 @@ The current work is implementing the first backend vertical slice:
 11. Article relevance, duplicate handling, and extraction failure reporting are in place.
 12. Minimal UI over the stable API response is in place.
 13. Ticker-centered analysis history is implemented.
-14. UI error states and evaluation summary visibility are implemented in the working tree.
-15. Next: validate and commit the UI error/evaluation visibility slice.
+14. UI error states, evaluation summary visibility, and evaluation refresh controls are implemented in the working tree.
+15. Next.js dashboard component refactor is implemented in the working tree.
+16. Next: validate and commit the UI refresh/refactor slice.
 
 ## Suggested Recommendation To Explore Next
 
@@ -281,6 +287,6 @@ When resuming:
 11. Apply database migrations with `cd services/api && source .venv/bin/activate && alembic upgrade head`.
 12. Optional notebook setup: `cd services/api && source .venv/bin/activate && python -m pip install -e ".[dev,notebooks]"`.
 13. Validate and commit the ticker-centered history slice if it is still uncommitted.
-14. Validate and commit the UI error/evaluation visibility slice if it is still uncommitted.
-15. Continue with UI polish around loading states and evaluation refresh controls.
+14. Validate and commit the UI refresh/refactor slice if it is still uncommitted.
+15. Continue with UI polish around panel-level loading states and clearer failed-analysis detail.
 16. Keep the UI research-only and avoid buy/sell/hold language.

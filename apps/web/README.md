@@ -23,7 +23,11 @@ loading a selected ticker workspace, selecting prior analyses for that ticker,
 and viewing forecast, sentiment, market quote, evidence, and limitation
 metadata. Article rows link back to the source URL when one is available. The
 dashboard also shows persistent API/evidence notices and a model-monitoring
-summary from `GET /evaluations/summary`.
+summary from `GET /evaluations/summary`. The evaluation monitor can trigger
+`POST /evaluations/refresh` and reload the summary afterward.
+
+Dashboard rendering is split into components under `components/dashboard`.
+Shared API response types and formatting helpers live under `lib`.
 
 Ticker-centered history is the active UI shape. A selected ticker, such as AMD,
 shows prior AMD analysis runs and the articles/evidence used across those runs
