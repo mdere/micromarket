@@ -174,7 +174,8 @@ Continue the first backend vertical slice:
 18. Ticker context ingestion direction: documented.
 19. Ticker onboarding, market-history backfill, and as-of-time alignment: in progress.
 20. Related-entity extraction: done.
-21. Next: curated sentiment fixtures and stronger baseline sentiment scoring.
+21. Curated sentiment fixtures and stronger baseline sentiment scoring: done.
+22. Next: expand sentiment fixtures and add optional Ollama sentiment provider behind `SentimentProvider`.
 
 ## Escalation Triggers
 

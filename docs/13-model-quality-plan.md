@@ -16,6 +16,10 @@ The current backend uses `BaselineSentimentProvider`, a deterministic lexicon-ba
 
 It is not expected to be accurate enough for final research use.
 
+Current baseline version: `sentiment-lexicon-baseline` `0.2.0`.
+
+The first curated fixture set lives at `services/api/tests/fixtures/sentiment_curated_examples.json` and covers positive, negative, neutral, mixed, weak-evidence, and negated-positive cases. The baseline now emits finance-specific driver categories, detects mixed positive/negative articles, handles simple negation, and lowers confidence for uncertainty language. Continue expanding the fixture set whenever a new failure case appears.
+
 ## Target Sentiment Output
 
 Every sentiment provider should return the same stable contract:
@@ -86,8 +90,8 @@ Improve the current deterministic provider before adding a neural or LLM model:
 Acceptance criteria:
 
 - Existing tests remain deterministic and offline.
-- New fixtures cover positive, negative, neutral, mixed, and weak-evidence articles.
-- Provider version increments, for example `lexicon-baseline-v0.2`.
+- New fixtures cover positive, negative, neutral, mixed, and weak-evidence articles. Initial fixture set is implemented.
+- Provider version increments, for example `lexicon-baseline-v0.2`. Current implemented version is `0.2.0`.
 
 ### Stage 2: Add Local LLM Sentiment Provider With Ollama
 
@@ -181,11 +185,11 @@ Provider selection should happen in `app/sentiment/dependencies.py`.
 
 1. Add ticker market-history backfill and `analysis_as_of` semantics.
 2. Add related-entity extraction and article/entity lineage.
-3. Add curated sentiment fixture data under `services/api/tests/fixtures` or `data/samples`.
-4. Improve `BaselineSentimentProvider` to produce better drivers, mixed labels, and confidence.
-5. Add tests for the curated examples.
-6. Update model version strings.
-7. Add notebook cells for comparing baseline output against fixtures.
+3. Add curated sentiment fixture data under `services/api/tests/fixtures` or `data/samples`. Done.
+4. Improve `BaselineSentimentProvider` to produce better drivers, mixed labels, and confidence. Done for deterministic baseline `0.2.0`.
+5. Add tests for the curated examples. Done.
+6. Update model version strings. Done.
+7. Add notebook cells for comparing baseline output against fixtures. Done in `notebooks/02_sentiment_baseline.ipynb`.
 
 ## Second Implementation Slice
 

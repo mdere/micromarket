@@ -1,0 +1,62 @@
+[
+  {
+    "id": "positive_earnings_demand",
+    "ticker": "AMD",
+    "title": "AMD demand and earnings momentum improve",
+    "text": "AMD reported revenue growth and beat expectations as AI accelerator demand improved. Management also raised guidance, citing market share gains and resilient enterprise orders.",
+    "expected_label": "positive",
+    "expected_score_min": 0.35,
+    "expected_score_max": 1.0,
+    "expected_drivers": ["demand", "earnings", "guidance"]
+  },
+  {
+    "id": "negative_guidance_margin_pressure",
+    "ticker": "AAPL",
+    "title": "AAPL suppliers warn on softer demand",
+    "text": "AAPL suppliers warned that weaker demand and margin pressure could continue into the next quarter. Analysts cited lowered guidance, delays, and valuation concerns.",
+    "expected_label": "negative",
+    "expected_score_min": -1.0,
+    "expected_score_max": -0.35,
+    "expected_drivers": ["demand", "earnings", "guidance", "valuation"]
+  },
+  {
+    "id": "neutral_operational_update",
+    "ticker": "MSFT",
+    "title": "MSFT publishes routine operations note",
+    "text": "MSFT published a routine operational update describing office openings, conference schedules, and general product availability. The note did not include financial outlook details or management commentary.",
+    "expected_label": "neutral",
+    "expected_score_min": -0.2,
+    "expected_score_max": 0.2,
+    "expected_drivers": []
+  },
+  {
+    "id": "mixed_growth_valuation_uncertainty",
+    "ticker": "NVDA",
+    "title": "NVDA demand strength offset by valuation concerns",
+    "text": "NVDA shares advanced after strong data-center demand and revenue growth, but analysts also highlighted valuation concerns, supply constraints, and rate uncertainty. The article described upside from HBM adoption while noting limited conviction.",
+    "expected_label": "mixed",
+    "expected_score_min": -0.35,
+    "expected_score_max": 0.35,
+    "expected_drivers": ["demand", "earnings", "uncertainty", "valuation"]
+  },
+  {
+    "id": "weak_evidence_short_note",
+    "ticker": "TSLA",
+    "title": "TSLA short market note",
+    "text": "TSLA held a product event.",
+    "expected_label": "neutral",
+    "expected_score_min": -0.2,
+    "expected_score_max": 0.2,
+    "expected_drivers": []
+  },
+  {
+    "id": "negated_positive_signal",
+    "ticker": "META",
+    "title": "META ad checks lack strength",
+    "text": "META ad checks were not strong and showed no revenue growth in several regions. The update remained cautious because demand trends were unclear.",
+    "expected_label": "negative",
+    "expected_score_min": -1.0,
+    "expected_score_max": -0.2,
+    "expected_drivers": ["demand", "earnings", "uncertainty"]
+  }
+]
