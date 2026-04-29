@@ -530,6 +530,30 @@ Run the curated fixture comparison cells to compare baseline and Ollama labels,
 scores, drivers, and confidence. Keep this exploratory; promote only stable
 findings into backend code and tests.
 
+The comparison roadmap is documented in
+`../../docs/13-model-quality-plan.md#baseline-vs-ollama-comparison-workflow`.
+Use that workflow to track label accuracy, driver coverage, evidence snippet
+quality, runtime, fallback rate, and whether Ollama improves enough to justify
+changing defaults later.
+
+You can also generate review files without opening Jupyter:
+
+```bash
+cd services/api
+source .venv/bin/activate
+python -m app.sentiment.comparison --include-ollama
+```
+
+Outputs:
+
+- `../../data/reports/sentiment_provider_comparison.csv`
+- `../../data/reports/sentiment_provider_comparison.md`
+
+The CSV includes blank review fields for `snippet_quality`, `driver_quality`,
+`research_only`, `review_notes`, and `review_action`. Fill those in while
+reviewing examples, then promote stable findings back into fixtures, provider
+tests, prompt changes, or parser changes.
+
 ## URL Ingestion
 
 `POST /analyses` accepts either manual article text or an absolute `http(s)`

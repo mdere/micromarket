@@ -153,6 +153,193 @@ Metrics:
 
 Stable scoring logic must move into tested backend modules before the API depends on it.
 
+### Baseline Vs Ollama Comparison Workflow
+
+The comparison should answer a narrow question first: does Ollama produce more useful, evidence-grounded article sentiment than the deterministic baseline on the curated fixture set, without breaking local-first reliability or research-only language?
+
+Run the comparison in phases:
+
+1. **Smoke test provider plumbing**
+   - Confirm `SENTIMENT_PROVIDER=ollama` returns `provider: "ollama"` in `sentiment_runs`.
+   - Confirm timeout/fallback behavior is visible in `limitations` when Ollama is too slow or unavailable.
+   - Tune only operational settings here, such as `OLLAMA_TIMEOUT_SECONDS`; do not change prompts based on one example.
+
+2. **Fixture comparison**
+   - Use `services/api/tests/fixtures/sentiment_curated_examples.json` as the first labeled dataset.
+   - Run `notebooks/02_sentiment_baseline.ipynb` with `RUN_OLLAMA_COMPARISON = True`.
+   - Or run `cd services/api && python -m app.sentiment.comparison --include-ollama` to write CSV/Markdown reports under `data/reports`.
+   - Record per-example baseline and Ollama label, score, confidence, drivers, evidence snippets, limitations, runtime, and failures/fallbacks.
+   - Expand the fixture set whenever either provider fails in an interesting way.
+
+3. **Qualitative review**
+   - Read the evidence snippets, not only the label.
+   - Mark whether snippets actually justify the sentiment.
+   - Mark whether drivers are specific enough to be useful, such as `guidance` or `valuation`, rather than vague.
+   - Reject outputs that drift into direct investment advice or unsupported claims, even if the label is correct.
+   - Write a short review note for each mismatch or suspicious pass so the fixture can teach the next prompt/provider change.
+
+4. **Quantitative review**
+   - Compute label accuracy against hand labels.
+   - Compute macro accuracy by label so neutral/mixed examples are not hidden by positive/negative examples.
+   - Compute mean absolute score error once fixtures include expected score ranges or hand scores.
+   - Track invalid JSON rate, fallback rate, and median/p95 runtime.
+   - Track driver coverage: how often expected drivers appear in provider output.
+
+5. **Decision checkpoint**
+   - Keep `baseline` as default until Ollama beats baseline on label accuracy, snippet quality, and driver usefulness by a meaningful margin.
+   - Keep fallback enabled for local use unless Ollama runtime is consistently reliable.
+   - Promote prompt or parsing improvements into provider tests before depending on them in the API.
+   - Do not let a better single example override fixture-level results.
+
+Suggested comparison table columns:
+
+```text
+id
+ticker
+expected_label
+baseline_label
+ollama_label
+baseline_score
+ollama_score
+baseline_confidence
+ollama_confidence
+label_match_baseline
+label_match_ollama
+expected_drivers
+baseline_drivers
+ollama_drivers
+ollama_runtime_seconds
+ollama_failed_or_fell_back
+review_notes
+```
+
+The report generator writes this review surface to:
+
+```text
+data/reports/sentiment_provider_comparison.csv
+data/reports/sentiment_provider_comparison.md
+```
+
+The CSV is the working review artifact. Keep generated reports local unless a specific report becomes useful as documentation; `data/reports/**` is ignored by Git by default.
+
+Initial decision thresholds before changing defaults:
+
+- At least 20 curated examples across positive, negative, neutral, mixed, weak-evidence, irrelevant-ticker, uncertainty, and negation cases.
+- Ollama label accuracy is better than baseline by at least 10 percentage points, or it materially improves mixed/neutral cases without hurting positive/negative cases.
+- Ollama evidence snippets are judged useful on at least 80% of examples.
+- Invalid JSON and fallback rate are low enough for local research use.
+- Runtime is acceptable for the local machine, or slow enough that it remains an explicit experimental provider.
+
+#### Qualitative Review Example
+
+Use qualitative review to inspect whether the provider's reasoning is grounded in the article, not merely whether the final label matches the hand label.
+
+Example fixture:
+
+```json
+{
+  "id": "mixed_growth_valuation_uncertainty",
+  "ticker": "NVDA",
+  "expected_label": "mixed",
+  "expected_drivers": ["demand", "earnings", "uncertainty", "valuation"],
+  "text": "NVDA shares advanced after strong data-center demand and revenue growth, but analysts also highlighted valuation concerns, supply constraints, and rate uncertainty. The article described upside from HBM adoption while noting limited conviction."
+}
+```
+
+Example provider output:
+
+```json
+{
+  "label": "positive",
+  "score": 0.64,
+  "confidence": 0.76,
+  "drivers": ["demand", "earnings", "product"],
+  "evidence_snippets": [
+    "NVDA shares advanced after strong data-center demand and revenue growth",
+    "The article described upside from HBM adoption"
+  ],
+  "limitations": ["Single article."]
+}
+```
+
+Review:
+
+```text
+label_match: no
+snippet_quality: partial
+driver_quality: partial
+research_only: pass
+review_notes:
+  Output captures the positive demand/earnings/product evidence, but misses the
+  valuation, supply, uncertainty, and limited-conviction language. Label should
+  be mixed, not positive, because the article contains explicit offsetting risk
+  signals. Evidence snippets are real article excerpts, but they selectively
+  quote only the positive side.
+action:
+  Add or keep this as a mixed fixture. Consider prompt language that asks for
+  both supporting and offsetting evidence before assigning the label. Do not
+  change default provider behavior based on this single case.
+```
+
+The same example with a stronger output:
+
+```json
+{
+  "label": "mixed",
+  "score": 0.15,
+  "confidence": 0.7,
+  "drivers": ["demand", "earnings", "valuation", "supply", "uncertainty", "product"],
+  "evidence_snippets": [
+    "strong data-center demand and revenue growth",
+    "valuation concerns, supply constraints, and rate uncertainty",
+    "upside from HBM adoption while noting limited conviction"
+  ],
+  "limitations": ["Single article; sentiment may not represent the broader market narrative."]
+}
+```
+
+Review:
+
+```text
+label_match: yes
+snippet_quality: pass
+driver_quality: pass
+research_only: pass
+review_notes:
+  Output captures both positive and negative evidence. Mixed label is justified,
+  score is near neutral but slightly positive, and snippets are grounded in the
+  fixture text. This is a useful response for the research workflow.
+action:
+  Count as a qualitative pass. If repeated across fixtures, this supports
+  trusting the provider for mixed-evidence articles.
+```
+
+Use this simple rubric for each example:
+
+```text
+label_match:
+  yes / no / debatable
+
+snippet_quality:
+  pass = snippets directly support the label and include important opposing evidence when present
+  partial = snippets are real but incomplete or one-sided
+  fail = snippets are missing, generic, hallucinated, or unrelated
+
+driver_quality:
+  pass = drivers match important article themes and expected drivers
+  partial = drivers are plausible but incomplete or too broad
+  fail = drivers are unsupported or miss the central signal
+
+research_only:
+  pass = no direct investment advice
+  fail = contains buy/sell/hold instruction, personalized advice, or unsupported forecast claim
+
+action:
+  fixture_ok / expand_fixture / tune_prompt / tune_parser / provider_bug / no_action
+```
+
+When reviewing, look for suspicious passes. A provider can get the label right for the wrong reason. For example, an output that labels an article `negative` because of "market crash risk" fails qualitative review if the article only mentioned a mild guidance cut and never discussed a crash.
+
 ### Stage 4: Optional Hosted Research Environments
 
 Hosted notebooks can accelerate experiments, but they should not become MVP runtime dependencies.
@@ -198,6 +385,14 @@ Provider selection should happen in `app/sentiment/dependencies.py`.
 3. Add fake-provider tests for success, invalid JSON, timeout/failure, and fallback behavior. Done.
 4. Add README setup notes for local Ollama usage. Done.
 5. Add a notebook for comparing baseline vs Ollama output on the fixture set. Initial optional notebook section added; expand during experiments.
+
+## Third Implementation Slice
+
+1. Add a sentiment provider comparison report generator. Done in `app/sentiment/comparison.py`.
+2. Write CSV and Markdown reports under `data/reports`. Done.
+3. Include blank human-review fields for snippet quality, driver quality, research-only check, review notes, and review action. Done.
+4. Use the report to expand fixtures to at least 20 examples before changing provider defaults.
+5. Promote repeated findings into provider tests and prompt/parser improvements.
 
 ## Guardrails
 

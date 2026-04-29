@@ -152,6 +152,13 @@ The product is research-only decision support. It should not issue direct buy/se
   - `SENTIMENT_PROVIDER_FALLBACK=baseline` lets Ollama failures return baseline sentiment with an explicit limitation; without fallback, provider errors return clear `502` responses and mark analyses as failed.
   - Tests use fake Ollama HTTP responses and do not require Ollama or network access.
   - `services/api/README.md` documents local Ollama installation, model pull, API environment configuration, Docker host URL caveats, API smoke testing, and notebook fixture comparison.
+- Baseline-vs-Ollama comparison workflow is documented in `docs/13-model-quality-plan.md`:
+  - Compare providers on curated fixtures before changing defaults.
+  - Track label accuracy, driver coverage, evidence snippet quality, runtime, fallback rate, and qualitative review notes.
+  - Keep baseline as default until fixture-level results justify a change.
+- Sentiment provider comparison report generator is implemented:
+  - `python -m app.sentiment.comparison --include-ollama` reads curated sentiment fixtures and writes CSV/Markdown review reports under `data/reports`.
+  - Reports include baseline/Ollama labels, scores, confidence, drivers, snippets, runtime, fallback/error fields, and blank qualitative review columns.
 - Environment setup has been clarified:
   - The API reads process environment variables plus local `.env` files via `app/core/config.py`.
   - `services/api/.env.example` is the checked-in local API template; copy it to ignored `services/api/.env`.
@@ -307,7 +314,8 @@ The current work is implementing the first backend vertical slice:
 22. Related-entity and narrative keyword extraction is implemented.
 23. Curated sentiment fixtures and deterministic baseline scoring improvements are implemented.
 24. Optional Ollama sentiment provider is implemented behind `SentimentProvider`.
-25. Next: expand curated sentiment fixtures and compare baseline vs Ollama outputs in notebook experiments before changing default provider behavior.
+25. Sentiment provider comparison report generator is implemented.
+26. Next: use generated comparison reports to expand curated fixtures and review Ollama quality before changing default provider behavior.
 
 ## Suggested Recommendation To Explore Next
 
@@ -324,7 +332,7 @@ The current recommended architecture is:
 - Also store next-close and 7-trading-day forecasts for later evaluation.
 - Start market data with `yfinance` behind a provider interface.
 - Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
-- Continue model-quality work by expanding curated sentiment fixtures and comparing baseline behavior against the optional Ollama sentiment provider in notebook experiments.
+- Continue model-quality work by generating baseline-vs-Ollama comparison reports, reviewing qualitative failures, and expanding curated sentiment fixtures before changing default provider behavior.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -352,6 +360,6 @@ When resuming:
 13. Read `docs/13-model-quality-plan.md`.
 14. Read `docs/14-ticker-context-ingestion-plan.md`.
 15. Expand curated sentiment fixtures as new failure cases appear.
-16. Compare baseline and Ollama sentiment outputs on fixtures in notebooks before changing the default provider.
+16. Generate baseline-vs-Ollama sentiment comparison reports and review qualitative failures before changing the default provider.
 17. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
 18. Keep the UI and model outputs research-only and avoid buy/sell/hold language.
