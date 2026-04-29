@@ -105,6 +105,11 @@ MICROMARKET_ENV=local
 DATABASE_URL=postgresql+psycopg://micromarket:micromarket@localhost:5432/micromarket
 ARTIFACT_ROOT=./data
 CORS_ORIGINS=http://localhost:3000
+SENTIMENT_PROVIDER=baseline
+SENTIMENT_PROVIDER_FALLBACK=baseline
+OLLAMA_BASE_URL=http://localhost:11434/api
+OLLAMA_SENTIMENT_MODEL=llama3.1:8b
+OLLAMA_TIMEOUT_SECONDS=30
 ```
 
 For Docker Compose, use `infra/env.example`; it points `DATABASE_URL` at the
@@ -304,18 +309,21 @@ fail because of network or upstream data issues. For that reason:
 - Revisit the provider boundary before adding paid or higher-reliability data
   sources.
 
-## Sentiment Provider
+## Sentiment Providers
 
-The MVP sentiment provider is `BaselineSentimentProvider` in
-`app/sentiment/baseline.py`.
+The default MVP sentiment provider is `BaselineSentimentProvider` in
+`app/sentiment/baseline.py`. Provider selection is controlled by
+`SENTIMENT_PROVIDER` and happens in `app/sentiment/dependencies.py`.
 
 It is intentionally deterministic and transparent. It uses a small positive and
 negative financial-language lexicon to produce:
 
-- `sentiment_label`: `positive`, `neutral`, or `negative`
+- `sentiment_label`: `positive`, `neutral`, `negative`, or `mixed`
 - `sentiment_score`: normalized from `-1.0` to `1.0`
-- `confidence_score`: bounded confidence based on number of matched terms
-- `drivers`: matched positive and negative term groups
+- `confidence_score`: bounded confidence based on matched signal density,
+  uncertainty, mixed evidence, and article length
+- `drivers`: finance-specific categories such as earnings, guidance, demand,
+  valuation, macro, regulatory, supply, product, and uncertainty
 - `evidence_snippets`: up to three matching sentences
 - `limitations`: notes such as no matched terms or very short text
 - `model_name` and `model_version`
@@ -332,11 +340,9 @@ repeatable measurement floor before introducing FinBERT, LLM-assisted sentiment,
 or a custom model. Future providers should continue to satisfy the local
 `SentimentProvider` protocol and store model/provider versions with every run.
 
-The next sentiment-quality step is documented in
-`../../docs/13-model-quality-plan.md`: add curated labeled fixtures, improve the
-deterministic baseline's finance lexicon, mixed-signal handling, driver tags,
-confidence scoring, and evidence snippets, then compare any later provider
-against the same fixtures.
+Curated sentiment fixtures live at
+`tests/fixtures/sentiment_curated_examples.json`. Use those fixtures to compare
+provider behavior before trusting prompt or model intuition.
 
 Before those comparisons are trusted, the API should support as-of-time aligned
 historical replay. A historical article published on `2026-03-05` should be
@@ -365,12 +371,38 @@ For example, an `NVDA` article mentioning `TSMC`, `Samsung`, `HBM`, or foundry
 capacity will return those related entities with research-only relationship
 metadata.
 
-Ollama is the preferred first local LLM experiment once ticker context,
-as-of-time alignment, and the sentiment fixture set exist.
-It should be added as an optional `OllamaSentimentProvider`, selected by
-configuration such as `SENTIMENT_PROVIDER=ollama`, and accessed through the same
-provider boundary. Tests should use fake responses and must not require Ollama,
-network access, Google Colab, Databricks, or any hosted model runtime.
+### Ollama Sentiment Provider
+
+`OllamaSentimentProvider` in `app/sentiment/ollama_provider.py` is an optional
+local LLM provider behind the same `SentimentProvider` protocol. It is disabled
+by default and does not run in tests unless fake HTTP responses are injected.
+
+To try it locally:
+
+```bash
+ollama serve
+ollama pull llama3.1:8b
+```
+
+Then set:
+
+```bash
+SENTIMENT_PROVIDER=ollama
+SENTIMENT_PROVIDER_FALLBACK=baseline
+OLLAMA_BASE_URL=http://localhost:11434/api
+OLLAMA_SENTIMENT_MODEL=llama3.1:8b
+OLLAMA_TIMEOUT_SECONDS=30
+```
+
+The provider calls Ollama's `/chat` endpoint with JSON output required. It
+validates that the model returns `label`, `score`, `confidence`, `drivers`,
+`evidence_snippets`, and `limitations`. Invalid JSON, missing fields, provider
+HTTP errors, and timeouts raise clear `SentimentProviderError` values. When
+`SENTIMENT_PROVIDER_FALLBACK=baseline`, those failures return baseline
+sentiment with an explicit limitation noting the Ollama failure.
+
+The prompt is limited to research-only article sentiment and evidence
+extraction. It does not ask for direct investment decisions.
 
 ## URL Ingestion
 

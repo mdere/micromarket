@@ -146,6 +146,11 @@ The product is research-only decision support. It should not issue direct buy/se
   - `BaselineSentimentProvider` has been upgraded to `sentiment-lexicon-baseline` version `0.2.0`.
   - The baseline now includes finance-specific driver categories, phrase handling, basic negation, mixed-label detection, and uncertainty-adjusted confidence.
   - `notebooks/02_sentiment_baseline.ipynb` includes a fixture review section for exploratory provider comparison.
+- Optional Ollama sentiment provider slice is implemented:
+  - `SENTIMENT_PROVIDER` selects `baseline` or `ollama` through `app/sentiment/dependencies.py`.
+  - `app/sentiment/ollama_provider.py` calls a local Ollama `/chat` endpoint, requires structured JSON output, validates provider fields, and preserves provider/model lineage in sentiment runs.
+  - `SENTIMENT_PROVIDER_FALLBACK=baseline` lets Ollama failures return baseline sentiment with an explicit limitation; without fallback, provider errors return clear `502` responses and mark analyses as failed.
+  - Tests use fake Ollama HTTP responses and do not require Ollama or network access.
 
 ## Decisions From Questionnaire
 
@@ -295,7 +300,8 @@ The current work is implementing the first backend vertical slice:
 21. Ticker onboarding, market-history backfill, and as-of-time aligned historical replay are implemented.
 22. Related-entity and narrative keyword extraction is implemented.
 23. Curated sentiment fixtures and deterministic baseline scoring improvements are implemented.
-24. Next: expand fixture coverage and use the fixture set to compare an optional Ollama sentiment provider behind `SentimentProvider`.
+24. Optional Ollama sentiment provider is implemented behind `SentimentProvider`.
+25. Next: expand curated sentiment fixtures and compare baseline vs Ollama outputs in notebook experiments before changing default provider behavior.
 
 ## Suggested Recommendation To Explore Next
 
@@ -312,7 +318,7 @@ The current recommended architecture is:
 - Also store next-close and 7-trading-day forecasts for later evaluation.
 - Start market data with `yfinance` behind a provider interface.
 - Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
-- Continue model-quality work by expanding curated sentiment fixtures and using them to compare baseline behavior against an optional Ollama sentiment provider behind `SentimentProvider`.
+- Continue model-quality work by expanding curated sentiment fixtures and comparing baseline behavior against the optional Ollama sentiment provider in notebook experiments.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -340,6 +346,6 @@ When resuming:
 13. Read `docs/13-model-quality-plan.md`.
 14. Read `docs/14-ticker-context-ingestion-plan.md`.
 15. Expand curated sentiment fixtures as new failure cases appear.
-16. Add an optional Ollama sentiment provider behind `SentimentProvider` when ready.
+16. Compare baseline and Ollama sentiment outputs on fixtures in notebooks before changing the default provider.
 17. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
 18. Keep the UI and model outputs research-only and avoid buy/sell/hold language.

@@ -2,6 +2,10 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 
+class SentimentProviderError(RuntimeError):
+    pass
+
+
 @dataclass(frozen=True)
 class SentimentResult:
     label: str

@@ -34,7 +34,7 @@ from app.market_data.provider import MarketDataProvider
 from app.market_data.yfinance_provider import MarketDataProviderError
 from app.schemas.analysis import AnalysisCreate, AnalysisResponse, ArticleInput
 from app.sentiment.dependencies import get_sentiment_provider
-from app.sentiment.provider import SentimentProvider
+from app.sentiment.provider import SentimentProvider, SentimentProviderError
 from app.storage import ArtifactStore
 
 router = APIRouter()
@@ -204,7 +204,13 @@ def create_analysis(
                 exclusion_reason=evidence_decision.exclusion_reason,
             )
         )
-        sentiment = sentiment_provider.score_article(normalized.text, ticker)
+        try:
+            sentiment = sentiment_provider.score_article(normalized.text, ticker)
+        except SentimentProviderError as exc:
+            analysis.status = "failed"
+            analysis.error_message = str(exc)
+            db.commit()
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
         sentiment_score = Decimal(str(sentiment.score))
         article_count += 1
         if evidence_decision.included_in_forecast:

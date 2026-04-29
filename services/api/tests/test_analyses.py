@@ -15,6 +15,8 @@ from app.ingestion.url_provider import URLExtractionError, URLExtractionResult
 from app.main import app
 from app.market_data.dependencies import get_market_data_provider
 from app.market_data.provider import MarketPrice, MarketQuote
+from app.sentiment.dependencies import get_sentiment_provider
+from app.sentiment.provider import SentimentProviderError
 
 
 class FakeMarketDataProvider:
@@ -75,6 +77,11 @@ class FakeURLExtractionProvider:
 class FailingURLExtractionProvider:
     def extract(self, url: str) -> URLExtractionResult:
         raise URLExtractionError(f"No article text could be extracted from {url}.")
+
+
+class FailingSentimentProvider:
+    def score_article(self, article_text: str, ticker: str):
+        raise SentimentProviderError("Sentiment provider unavailable.")
 
 
 def build_test_app(tmp_path, url_extraction_provider=None):
@@ -413,6 +420,35 @@ def test_create_analysis_reports_url_extraction_failure(tmp_path) -> None:
         assert failed.status_code == 200
         assert failed.json()[0]["status"] == "failed"
         assert "No article text could be extracted" in failed.json()[0]["error_message"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_create_analysis_reports_sentiment_provider_failure(tmp_path) -> None:
+    client = build_test_app(tmp_path)
+    app.dependency_overrides[get_sentiment_provider] = lambda: FailingSentimentProvider()
+
+    try:
+        response = client.post(
+            "/analyses",
+            json={
+                "ticker": "SPY",
+                "articles": [
+                    {
+                        "title": "SPY sentiment provider failure",
+                        "source": "manual note",
+                        "text": "SPY demand improved as market breadth expanded.",
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 502
+        assert response.json()["detail"] == "Sentiment provider unavailable."
+        failed = client.get("/analyses?ticker=SPY")
+        assert failed.status_code == 200
+        assert failed.json()[0]["status"] == "failed"
+        assert failed.json()[0]["error_message"] == "Sentiment provider unavailable."
     finally:
         app.dependency_overrides.clear()
 

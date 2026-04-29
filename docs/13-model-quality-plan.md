@@ -123,10 +123,10 @@ Suggested response schema:
 
 Acceptance criteria:
 
-- Provider is selected by configuration, not hardcoded.
-- Raw model output is stored as an artifact or structured debug payload when practical.
-- Invalid JSON, missing fields, and provider timeouts return clear errors or fall back according to explicit configuration.
-- Sentiment runs store provider/model name/version.
+- Provider is selected by configuration, not hardcoded. Done with `SENTIMENT_PROVIDER`.
+- Raw model output is stored as an artifact or structured debug payload when practical. Not yet implemented; revisit after initial provider comparisons.
+- Invalid JSON, missing fields, and provider timeouts return clear errors or fall back according to explicit configuration. Done with `SENTIMENT_PROVIDER_FALLBACK`.
+- Sentiment runs store provider/model name/version. Done through the shared `SentimentProvider` contract.
 
 ### Stage 3: Notebook Evaluation Harness
 
@@ -193,11 +193,11 @@ Provider selection should happen in `app/sentiment/dependencies.py`.
 
 ## Second Implementation Slice
 
-1. Add `OllamaSentimentProvider`.
-2. Add configuration settings.
-3. Add fake-provider tests for success, invalid JSON, timeout/failure, and fallback behavior.
-4. Add README setup notes for local Ollama usage.
-5. Add a notebook for comparing baseline vs Ollama output on the fixture set.
+1. Add `OllamaSentimentProvider`. Done.
+2. Add configuration settings. Done.
+3. Add fake-provider tests for success, invalid JSON, timeout/failure, and fallback behavior. Done.
+4. Add README setup notes for local Ollama usage. Done.
+5. Add a notebook for comparing baseline vs Ollama output on the fixture set. Initial optional notebook section added; expand during experiments.
 
 ## Guardrails
 

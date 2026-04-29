@@ -13,6 +13,17 @@ class Settings(BaseSettings):
     artifact_root: str = Field(default="./data", alias="ARTIFACT_ROOT")
     cors_origins_raw: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
     market_lookback_days: int = Field(default=30, alias="MARKET_LOOKBACK_DAYS")
+    sentiment_provider: str = Field(default="baseline", alias="SENTIMENT_PROVIDER")
+    sentiment_provider_fallback: str | None = Field(
+        default="baseline",
+        alias="SENTIMENT_PROVIDER_FALLBACK",
+    )
+    ollama_base_url: str = Field(default="http://localhost:11434/api", alias="OLLAMA_BASE_URL")
+    ollama_sentiment_model: str = Field(
+        default="llama3.1:8b",
+        alias="OLLAMA_SENTIMENT_MODEL",
+    )
+    ollama_timeout_seconds: float = Field(default=30.0, alias="OLLAMA_TIMEOUT_SECONDS")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
