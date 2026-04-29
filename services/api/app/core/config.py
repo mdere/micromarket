@@ -25,7 +25,10 @@ class Settings(BaseSettings):
     )
     ollama_timeout_seconds: float = Field(default=30.0, alias="OLLAMA_TIMEOUT_SECONDS")
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(".env", "services/api/.env"),
+        extra="ignore",
+    )
 
     @property
     def cors_origins(self) -> list[str]:

@@ -21,7 +21,7 @@ services:
       context: ../services/api
     container_name: micromarket-api
     env_file:
-      - ./env.example
+      - ./.env
     ports:
       - "8000:8000"
     volumes:

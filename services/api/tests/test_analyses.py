@@ -101,7 +101,7 @@ def build_test_app(tmp_path, url_extraction_provider=None):
             db.close()
 
     def override_settings() -> Settings:
-        return Settings(ARTIFACT_ROOT=str(tmp_path))
+        return Settings(ARTIFACT_ROOT=str(tmp_path), SENTIMENT_PROVIDER="baseline")
 
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_settings] = override_settings

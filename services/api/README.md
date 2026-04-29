@@ -95,16 +95,25 @@ network access.
 
 ## Environment
 
-Settings are read from environment variables and, when running from this
-directory, an optional `.env` file.
+Settings are read from process environment variables and local `.env` files via
+`app/core/config.py`. Process environment values win. For manual API runs, copy
+the checked-in example and edit the ignored local file:
 
-Useful defaults:
+```bash
+cp services/api/.env.example services/api/.env
+```
+
+The API will read `services/api/.env` whether you start `uvicorn` from the
+repository root or from `services/api`.
+
+Useful defaults in `services/api/.env.example`:
 
 ```bash
 MICROMARKET_ENV=local
 DATABASE_URL=postgresql+psycopg://micromarket:micromarket@localhost:5432/micromarket
 ARTIFACT_ROOT=./data
 CORS_ORIGINS=http://localhost:3000
+MARKET_LOOKBACK_DAYS=30
 SENTIMENT_PROVIDER=baseline
 SENTIMENT_PROVIDER_FALLBACK=baseline
 OLLAMA_BASE_URL=http://localhost:11434/api
@@ -112,8 +121,14 @@ OLLAMA_SENTIMENT_MODEL=llama3.1:8b
 OLLAMA_TIMEOUT_SECONDS=30
 ```
 
-For Docker Compose, use `infra/env.example`; it points `DATABASE_URL` at the
-Compose database service.
+For Docker Compose, copy the Compose environment example:
+
+```bash
+cp infra/.env.example infra/.env
+```
+
+`infra/.env` points `DATABASE_URL` at the Compose database service. It is
+ignored by Git.
 
 ## Local Setup
 
@@ -149,11 +164,12 @@ The API will listen on `http://localhost:8000`.
 To run PostgreSQL, API, and web together from the repository root:
 
 ```bash
+cp infra/.env.example infra/.env
 docker compose -f infra/docker-compose.yml up --build
 ```
 
 The API container mounts the repository `data/` directory at `/app/data`, which
-matches `ARTIFACT_ROOT=/app/data` in `infra/env.example`.
+matches `ARTIFACT_ROOT=/app/data` in `infra/.env.example`.
 
 ## Verification
 
@@ -377,14 +393,65 @@ metadata.
 local LLM provider behind the same `SentimentProvider` protocol. It is disabled
 by default and does not run in tests unless fake HTTP responses are injected.
 
-To try it locally:
+Use it when you want to compare a local LLM sentiment read against the
+deterministic baseline. Keep `SENTIMENT_PROVIDER_FALLBACK=baseline` on while
+experimenting so analysis creation can still complete if Ollama is unavailable
+or returns invalid JSON.
+
+#### 1. Install Ollama
+
+On macOS, either install the desktop app from <https://ollama.com/download> or
+use Homebrew:
+
+```bash
+brew install ollama
+```
+
+On Linux:
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+Verify the CLI is available:
+
+```bash
+ollama --version
+```
+
+#### 2. Start Ollama And Pull A Model
+
+Start the local Ollama server in a separate terminal:
 
 ```bash
 ollama serve
+```
+
+Then pull the default project model:
+
+```bash
 ollama pull llama3.1:8b
 ```
 
-Then set:
+You can use another local chat model later by changing `OLLAMA_SENTIMENT_MODEL`,
+but keep `llama3.1:8b` as the first smoke-test target because the docs and
+fixtures assume it.
+
+Confirm Ollama can respond:
+
+```bash
+ollama run llama3.1:8b "Return only JSON: {\"status\":\"ok\"}"
+```
+
+You can also check the HTTP API directly:
+
+```bash
+curl http://localhost:11434/api/tags
+```
+
+#### 3. Configure The API
+
+For local API runs, edit `services/api/.env`:
 
 ```bash
 SENTIMENT_PROVIDER=ollama
@@ -393,6 +460,53 @@ OLLAMA_BASE_URL=http://localhost:11434/api
 OLLAMA_SENTIMENT_MODEL=llama3.1:8b
 OLLAMA_TIMEOUT_SECONDS=30
 ```
+
+Then start the API normally:
+
+```bash
+cd services/api
+source .venv/bin/activate
+uvicorn app.main:app --reload
+```
+
+For Docker Compose, edit `infra/.env`.
+If the API runs in a container and Ollama runs on the host, `localhost` inside
+the container points at the container, not your host. On Docker Desktop for
+macOS/Windows, use:
+
+```bash
+OLLAMA_BASE_URL=http://host.docker.internal:11434/api
+```
+
+On Linux Docker, either run the API locally outside Docker for the first smoke
+test or configure host networking / a reachable host address for Ollama.
+
+#### 4. Smoke Test Through The API
+
+With PostgreSQL and the API running, submit a manual analysis:
+
+```bash
+curl -X POST http://localhost:8000/analyses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticker": "AMD",
+    "articles": [
+      {
+        "title": "AMD local Ollama sentiment smoke test",
+        "source": "manual note",
+        "text": "AMD reported revenue growth and raised guidance as AI accelerator demand improved. Analysts also noted valuation concerns and supply constraints."
+      }
+    ]
+  }'
+```
+
+Inspect `sentiment_runs[0]` in the response:
+
+- `provider: "ollama"` means Ollama produced valid structured sentiment.
+- `provider: "baseline"` plus a limitation containing `Ollama sentiment provider
+  failed` means fallback worked and the run still completed.
+- A `502` response means fallback is disabled or unavailable and the provider
+  error was allowed to fail the analysis.
 
 The provider calls Ollama's `/chat` endpoint with JSON output required. It
 validates that the model returns `label`, `score`, `confidence`, `drivers`,
@@ -403,6 +517,18 @@ sentiment with an explicit limitation noting the Ollama failure.
 
 The prompt is limited to research-only article sentiment and evidence
 extraction. It does not ask for direct investment decisions.
+
+#### 5. Compare Against Fixtures
+
+Open `notebooks/02_sentiment_baseline.ipynb` and set:
+
+```python
+RUN_OLLAMA_COMPARISON = True
+```
+
+Run the curated fixture comparison cells to compare baseline and Ollama labels,
+scores, drivers, and confidence. Keep this exploratory; promote only stable
+findings into backend code and tests.
 
 ## URL Ingestion
 

@@ -151,6 +151,12 @@ The product is research-only decision support. It should not issue direct buy/se
   - `app/sentiment/ollama_provider.py` calls a local Ollama `/chat` endpoint, requires structured JSON output, validates provider fields, and preserves provider/model lineage in sentiment runs.
   - `SENTIMENT_PROVIDER_FALLBACK=baseline` lets Ollama failures return baseline sentiment with an explicit limitation; without fallback, provider errors return clear `502` responses and mark analyses as failed.
   - Tests use fake Ollama HTTP responses and do not require Ollama or network access.
+  - `services/api/README.md` documents local Ollama installation, model pull, API environment configuration, Docker host URL caveats, API smoke testing, and notebook fixture comparison.
+- Environment setup has been clarified:
+  - The API reads process environment variables plus local `.env` files via `app/core/config.py`.
+  - `services/api/.env.example` is the checked-in local API template; copy it to ignored `services/api/.env`.
+  - `infra/.env.example` is the checked-in Docker Compose template; copy it to ignored `infra/.env`.
+  - Docker Compose now reads `infra/.env` rather than using an example file directly.
 
 ## Decisions From Questionnaire
 

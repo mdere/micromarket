@@ -85,14 +85,18 @@ def test_ollama_sentiment_falls_back_to_baseline_on_timeout() -> None:
 
 
 def test_sentiment_dependency_selects_baseline_by_default() -> None:
-    provider = get_sentiment_provider(Settings())
+    provider = get_sentiment_provider(Settings(_env_file=None))
 
     assert isinstance(provider, BaselineSentimentProvider)
 
 
 def test_sentiment_dependency_selects_ollama_with_baseline_fallback() -> None:
     provider = get_sentiment_provider(
-        Settings(SENTIMENT_PROVIDER="ollama", SENTIMENT_PROVIDER_FALLBACK="baseline")
+        Settings(
+            SENTIMENT_PROVIDER="ollama",
+            SENTIMENT_PROVIDER_FALLBACK="baseline",
+            _env_file=None,
+        )
     )
 
     assert isinstance(provider, OllamaSentimentProvider)
@@ -101,4 +105,4 @@ def test_sentiment_dependency_selects_ollama_with_baseline_fallback() -> None:
 
 def test_sentiment_dependency_rejects_unknown_provider() -> None:
     with pytest.raises(ValueError, match="Unsupported SENTIMENT_PROVIDER"):
-        get_sentiment_provider(Settings(SENTIMENT_PROVIDER="unknown"))
+        get_sentiment_provider(Settings(SENTIMENT_PROVIDER="unknown", _env_file=None))

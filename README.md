@@ -39,10 +39,10 @@ docs            Product, architecture, and roadmap documents
 
 ## Local Development
 
-Review the default local environment values:
+Create a local Docker Compose environment file:
 
 ```bash
-cat infra/env.example
+cp infra/.env.example infra/.env
 ```
 
 Start PostgreSQL, API, and web with Docker Compose:
@@ -54,6 +54,7 @@ docker compose -f infra/docker-compose.yml up --build
 Or run services manually:
 
 ```bash
+cp services/api/.env.example services/api/.env
 cd services/api
 python -m venv .venv
 source .venv/bin/activate
@@ -72,6 +73,14 @@ Health check:
 ```bash
 curl http://localhost:8000/health
 ```
+
+Optional local LLM sentiment:
+
+- The API defaults to deterministic baseline sentiment.
+- Ollama can be enabled with `SENTIMENT_PROVIDER=ollama` after Ollama is
+  installed, running, and a local model is pulled.
+- Full setup and smoke-test instructions live in
+  [services/api/README.md](services/api/README.md#ollama-sentiment-provider).
 
 ## Assumptions
 
