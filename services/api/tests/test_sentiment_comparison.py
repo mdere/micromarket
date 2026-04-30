@@ -1,6 +1,13 @@
 import pytest
 
-from app.sentiment.comparison import compare_fixtures, select_fixtures, write_reports
+from app.core.config import Settings
+from app.sentiment.baseline import BaselineSentimentProvider
+from app.sentiment.comparison import (
+    build_ollama_provider,
+    compare_fixtures,
+    select_fixtures,
+    write_reports,
+)
 from app.sentiment.provider import SentimentResult
 
 
@@ -181,3 +188,33 @@ def test_select_fixtures_applies_limit_after_filtering() -> None:
 def test_select_fixtures_rejects_unknown_fixture_id() -> None:
     with pytest.raises(ValueError, match="missing"):
         select_fixtures([{"id": "first"}], fixture_ids=["missing"])
+
+
+def test_build_ollama_provider_can_disable_fallback_and_override_runtime_settings() -> None:
+    provider = build_ollama_provider(
+        Settings(
+            OLLAMA_BASE_URL="http://localhost:11434/api",
+            OLLAMA_SENTIMENT_MODEL="llama3.1:8b",
+            OLLAMA_TIMEOUT_SECONDS=30,
+            SENTIMENT_PROVIDER_FALLBACK="baseline",
+            _env_file=None,
+        ),
+        fallback_enabled=False,
+        base_url="http://localhost:11435/api",
+        model="llama3.2:3b",
+        timeout_seconds=12,
+    )
+
+    assert provider.base_url == "http://localhost:11435/api"
+    assert provider.model == "llama3.2:3b"
+    assert provider.timeout_seconds == 12
+    assert provider.fallback_provider is None
+
+
+def test_build_ollama_provider_uses_baseline_fallback_when_enabled() -> None:
+    provider = build_ollama_provider(
+        Settings(SENTIMENT_PROVIDER_FALLBACK="baseline", _env_file=None),
+        fallback_enabled=True,
+    )
+
+    assert isinstance(provider.fallback_provider, BaselineSentimentProvider)

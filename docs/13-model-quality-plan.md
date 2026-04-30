@@ -402,13 +402,17 @@ Implemented after reviewing the first expanded comparison:
   - `python -m app.sentiment.comparison --include-ollama --limit 5`
   - `python -m app.sentiment.comparison --include-ollama --fixture-id mixed_partner_strength_customer_delay`
   - `python -m app.sentiment.comparison --include-ollama --fixture-id mixed_partner_strength_customer_delay --fixture-id mixed_earnings_beat_guidance_cut`
+- The report generator also supports runtime diagnosis without editing `.env`:
+  - `--ollama-no-fallback` makes native Ollama errors visible instead of substituting baseline output,
+  - `--ollama-timeout-seconds N` changes the timeout for that comparison run,
+  - `--ollama-model MODEL` and `--ollama-base-url URL` override local Ollama settings for that comparison run.
 - The Ollama prompt now explicitly asks for grounded driver coverage:
   - include every materially relevant supported driver,
   - include both supportive and offsetting drivers for mixed labels,
   - do not include a driver unless an evidence snippet supports it,
   - use `uncertainty`, `analyst_action`, and `guidance` for the relevant language.
 
-Next review step: rerun a small targeted Ollama batch on the two mixed fixtures first. If driver coverage improves without introducing unsupported categories, run the full 20-fixture comparison and update this section with the new metrics.
+Next review step: get one native, non-fallback Ollama row before judging prompt quality. Run one mixed fixture with `--ollama-no-fallback`; if it still times out, reduce runtime pressure by using a smaller local model or increasing timeout only if that is acceptable for local research. After native Ollama rows are available, rerun the two mixed fixtures and then the full 20-fixture comparison.
 
 ### Stage 4: Optional Hosted Research Environments
 

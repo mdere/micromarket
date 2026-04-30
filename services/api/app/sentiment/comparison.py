@@ -73,16 +73,24 @@ def write_reports(rows: list[dict[str, Any]], output_dir: Path) -> tuple[Path, P
     return csv_path, markdown_path, review_path
 
 
-def build_ollama_provider(settings: Settings) -> OllamaSentimentProvider:
+def build_ollama_provider(
+    settings: Settings,
+    *,
+    fallback_enabled: bool = True,
+    base_url: str | None = None,
+    model: str | None = None,
+    timeout_seconds: float | None = None,
+) -> OllamaSentimentProvider:
     fallback_provider = (
         BaselineSentimentProvider()
-        if (settings.sentiment_provider_fallback or "").strip().lower() == "baseline"
+        if fallback_enabled
+        and (settings.sentiment_provider_fallback or "").strip().lower() == "baseline"
         else None
     )
     return OllamaSentimentProvider(
-        base_url=settings.ollama_base_url,
-        model=settings.ollama_sentiment_model,
-        timeout_seconds=settings.ollama_timeout_seconds,
+        base_url=base_url or settings.ollama_base_url,
+        model=model or settings.ollama_sentiment_model,
+        timeout_seconds=timeout_seconds or settings.ollama_timeout_seconds,
         fallback_provider=fallback_provider,
     )
 
@@ -120,13 +128,46 @@ def main() -> None:
         default=None,
         help="Only compare the first N fixtures after any fixture-id filtering.",
     )
+    parser.add_argument(
+        "--ollama-no-fallback",
+        action="store_true",
+        help="Disable baseline fallback for this comparison run so native Ollama failures are visible.",
+    )
+    parser.add_argument(
+        "--ollama-base-url",
+        default=None,
+        help="Override OLLAMA_BASE_URL for this comparison run.",
+    )
+    parser.add_argument(
+        "--ollama-model",
+        default=None,
+        help="Override OLLAMA_SENTIMENT_MODEL for this comparison run.",
+    )
+    parser.add_argument(
+        "--ollama-timeout-seconds",
+        type=float,
+        default=None,
+        help="Override OLLAMA_TIMEOUT_SECONDS for this comparison run.",
+    )
     args = parser.parse_args()
     if args.limit is not None and args.limit < 1:
         parser.error("--limit must be at least 1.")
+    if args.ollama_timeout_seconds is not None and args.ollama_timeout_seconds <= 0:
+        parser.error("--ollama-timeout-seconds must be greater than 0.")
 
     settings = Settings()
     baseline_provider = BaselineSentimentProvider()
-    ollama_provider = build_ollama_provider(settings) if args.include_ollama else None
+    ollama_provider = (
+        build_ollama_provider(
+            settings,
+            fallback_enabled=not args.ollama_no_fallback,
+            base_url=args.ollama_base_url,
+            model=args.ollama_model,
+            timeout_seconds=args.ollama_timeout_seconds,
+        )
+        if args.include_ollama
+        else None
+    )
     fixtures = load_fixtures(args.fixtures)
     try:
         selected_fixtures = select_fixtures(

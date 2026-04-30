@@ -554,6 +554,26 @@ python -m app.sentiment.comparison --include-ollama \
   --fixture-id mixed_earnings_beat_guidance_cut
 ```
 
+When diagnosing timeouts, disable fallback for a single fixture so the report
+shows a native Ollama result or a native Ollama error instead of a baseline
+substitute:
+
+```bash
+python -m app.sentiment.comparison --include-ollama --ollama-no-fallback \
+  --ollama-timeout-seconds 300 \
+  --fixture-id mixed_earnings_beat_guidance_cut
+```
+
+You can also override the model without editing `.env`, which is useful when
+trying a smaller local model:
+
+```bash
+python -m app.sentiment.comparison --include-ollama --ollama-no-fallback \
+  --ollama-model llama3.2:3b \
+  --ollama-timeout-seconds 180 \
+  --fixture-id mixed_earnings_beat_guidance_cut
+```
+
 Outputs:
 
 - `../../data/reports/sentiment_provider_comparison.csv`
