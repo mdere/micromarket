@@ -206,6 +206,109 @@ Implementation status:
 - The first deterministic dictionary covers examples such as `TSMC`, `Samsung`, `HBM`, `AI chips`, and `foundry capacity`.
 - Next model-quality slice should add curated sentiment fixtures and improve baseline sentiment scoring.
 
+## Tracking Needs And Related Asset Roadmap
+
+The next product direction is to turn extracted entities into explicit research leads.
+
+When an analysis for a primary ticker mentions related companies, assets, products, customers, suppliers, competitors, or themes, the ticker workspace should show those associations and explain why they may matter. A user should be able to click a related asset such as `TSM`, `MSFT`, `AMZN`, or `NVDA`, open that asset's own ticker workspace, feed in articles, and later compare related-asset sentiment and market movement against the primary ticker.
+
+This should remain research-only. Related assets should be treated as context and follow-up candidates, not as buy/sell/hold recommendations.
+
+### Current Foundation
+
+Already implemented:
+
+- `entities` stores normalized related assets, companies, products, themes, and keywords.
+- `article_entities` links article evidence to extracted entities with provider/model lineage and evidence snippets.
+- `asset_relationships` links the primary ticker's asset to related entities with relationship types such as `supplier`, `customer`, `competitor`, `product_exposure`, and `mentioned_with`.
+- Article responses include extracted entities, relationship type, confidence, evidence snippets, and extraction lineage.
+- Ticker workspaces already group repeated analyses and article history by primary ticker.
+
+Not yet implemented:
+
+- A first-class per-analysis "tracking needs" object.
+- A backend response surface that aggregates related entities into prioritized ticker-workspace suggestions.
+- A UI panel for related assets, companies, and themes.
+- One-click navigation from a related ticker/entity into its own ticker workspace.
+- Automatic market-history onboarding for related tickers suggested by an analysis.
+- Correlation or proportional-impact analysis between a primary ticker and related assets.
+
+### Proposed Data Addition: `analysis_tracking_needs`
+
+Add a table that records follow-up tracking suggestions generated from each analysis.
+
+Fields:
+
+- `id`
+- `analysis_id`
+- `primary_asset_id`
+- `entity_id`
+- `suggested_symbol`
+- `tracking_type`: `related_ticker`, `supplier`, `customer`, `competitor`, `product_theme`, `macro_theme`, `unknown`
+- `reason`
+- `evidence_snippets`
+- `priority_score`
+- `status`: `suggested`, `accepted`, `ignored`, `tracked`
+- `provider`
+- `model_name`
+- `model_version`
+- `created_at`
+- `updated_at`
+
+Initial tracking needs can be generated deterministically from `article_entities` and `asset_relationships`:
+
+- related entities with a symbol become `related_ticker` candidates,
+- suppliers/customers/competitors get higher priority than generic mentions,
+- products/themes are suggested as context but do not need market-history onboarding,
+- repeated mentions across articles or analyses increase priority,
+- low-confidence or generic `mentioned_with` entities remain lower priority.
+
+### Backend Slice
+
+1. Add `AnalysisTrackingNeed` model and Alembic migration.
+2. Add a deterministic tracking-needs generator behind a small service interface.
+3. Generate tracking needs after article entities are persisted.
+4. Add tracking needs to `AnalysisResponse`.
+5. Add focused tests:
+   - an `NVDA` article mentioning `TSMC`, `Samsung`, and `HBM` returns tracking needs,
+   - ticker-backed entities include `suggested_symbol`,
+   - product/theme entities do not trigger market-history onboarding yet,
+   - repeated entities update or preserve priority without duplicates.
+
+### Web App Slice
+
+1. Extend frontend API types to include article entities and tracking needs.
+2. Add a ticker-workspace panel such as `Related Signals` or `Tracking Needs`.
+3. Show:
+   - related ticker/company/theme,
+   - relationship type,
+   - priority/confidence,
+   - evidence snippet,
+   - status.
+4. Make related ticker symbols clickable so selecting `TSM` or `MSFT` loads that ticker workspace.
+5. Keep product/theme rows visible as context even when they are not clickable tickers.
+6. Do not show investment advice language.
+
+### Later Correlation Slice
+
+Only after related assets have their own article/sentiment/history data:
+
+1. Ensure related assets have market history over aligned windows.
+2. Compare primary ticker sentiment and price movement with related-asset sentiment and price movement using `analysis_as_of` aligned windows.
+3. Start with descriptive metrics:
+   - co-mention count,
+   - related-asset sentiment direction,
+   - related-asset price move over matching horizons,
+   - primary ticker price move over matching horizons.
+4. Add correlation-style metrics only once enough historical observations exist.
+5. Treat correlations as exploratory research context, not forecasts or investment advice.
+
+## Next Recommended Slice
+
+Implement `analysis_tracking_needs` and surface it in the API before expanding the web UI.
+
+Reason: the backend already captures raw related entities and relationships, but the user-facing workflow needs a stable, prioritized object that says "track this because this article connected it to the primary ticker." Once that object exists, the web app can render it cleanly and later use it for related-ticker navigation.
+
 ## Guardrails
 
 - Do not use future market data for historical features.
@@ -214,3 +317,4 @@ Implementation status:
 - Keep extraction deterministic at first.
 - Use fake providers in tests.
 - Treat related-company signals as research context until evaluated.
+- Keep tracking needs as suggestions until the user accepts or enough evidence supports promotion.

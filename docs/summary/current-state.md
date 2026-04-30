@@ -141,6 +141,13 @@ The product is research-only decision support. It should not issue direct buy/se
   - `POST /analyses` now persists article/entity links and primary-ticker relationships.
   - Article responses include related entity metadata, relationship type, provider/model lineage, confidence, and evidence snippets.
   - Tests cover an `NVDA` article mentioning `TSMC`, `Samsung`, and `HBM`.
+- Related asset tracking roadmap is documented:
+  - `docs/14-ticker-context-ingestion-plan.md` now defines the next tracking-needs direction.
+  - Goal: each ticker workspace should show related assets, companies, products, customers, suppliers, competitors, and themes that may affect the primary ticker.
+  - Related tickers such as `TSM`, `MSFT`, `AMZN`, or `NVDA` should become navigable workspaces where their own articles, sentiment, and market history can be gathered.
+  - Next backend slice should add `analysis_tracking_needs`, generated from extracted entities and asset relationships.
+  - Next UI slice should show a `Related Signals` or `Tracking Needs` panel in the ticker workspace.
+  - Correlation/proportional-impact analysis should wait until related assets have their own sentiment and market-history observations.
 - Curated sentiment fixture slice is implemented:
   - `services/api/tests/fixtures/sentiment_curated_examples.json` contains 20 deterministic examples across positive, negative, neutral, mixed, weak-evidence, negation, analyst-action, regulatory/product, supply-chain, related-entity, uncertainty, guidance-cut, and irrelevant-ticker cases.
   - `BaselineSentimentProvider` has been upgraded to `sentiment-lexicon-baseline` version `0.2.0`.
@@ -342,21 +349,22 @@ The current work is implementing the first backend vertical slice:
 20. Ticker context ingestion plan is documented.
 21. Ticker onboarding, market-history backfill, and as-of-time aligned historical replay are implemented.
 22. Related-entity and narrative keyword extraction is implemented.
-23. Curated sentiment fixtures and deterministic baseline scoring improvements are implemented.
-24. Optional Ollama sentiment provider is implemented behind `SentimentProvider`.
-25. Sentiment provider comparison report generator is implemented.
-26. First expanded baseline-vs-Ollama comparison run is documented.
-27. Sentiment comparison follow-up slice is implemented: 20th fixture, report batching controls, Ollama runtime overrides, and Ollama driver prompt tuning.
-28. Targeted two-fixture rerun after prompt tuning timed out on both Ollama calls and fell back to baseline; report summaries now distinguish native Ollama matches from fallback matches.
-29. Single-fixture no-fallback runs reached Ollama after about 244.7s and 265.5s but failed schema validation on list-field variants; parser tolerance for single-string list fields and driver-object fields is implemented.
-30. First valid native Ollama row is captured for `mixed_earnings_beat_guidance_cut`: label match, grounded snippets, research-only language, partial driver coverage, and about 263.1s runtime.
-31. Two-fixture no-fallback mixed rerun produced native Ollama rows with no fallbacks: 1/2 label match, grounded snippets, partial driver quality, and about 174.5s-209.7s runtime per fixture.
-32. Ollama prompt is tightened for mixed-evidence labeling and driver discipline after the two-fixture run.
-33. Post-tune two-fixture rerun with `--ollama-timeout-seconds 120` timed out on both fixtures, confirming the larger local model cannot assess quality at shorter CPU timeouts.
-34. Smaller-model rerun with `llama3.2:3b` produced native no-fallback rows for both mixed fixtures: 2/2 label matches, grounded snippets, partial driver quality, and about 94.0s-101.1s runtime.
-35. 5-fixture no-fallback `llama3.2:3b` batch produced native rows with no fallbacks, 4/5 label matches, grounded snippets, partial driver quality, and about 78.7s-97.2s runtime.
-36. Prompt is tightened for weak-evidence neutrality and normalized driver categories after the 5-fixture miss.
-37. Next: rerun the 5-fixture no-fallback `llama3.2:3b` batch after the prompt tune before attempting 10 or 20 fixtures.
+23. Related asset tracking-needs roadmap is documented.
+24. Curated sentiment fixtures and deterministic baseline scoring improvements are implemented.
+25. Optional Ollama sentiment provider is implemented behind `SentimentProvider`.
+26. Sentiment provider comparison report generator is implemented.
+27. First expanded baseline-vs-Ollama comparison run is documented.
+28. Sentiment comparison follow-up slice is implemented: 20th fixture, report batching controls, Ollama runtime overrides, and Ollama driver prompt tuning.
+29. Targeted two-fixture rerun after prompt tuning timed out on both Ollama calls and fell back to baseline; report summaries now distinguish native Ollama matches from fallback matches.
+30. Single-fixture no-fallback runs reached Ollama after about 244.7s and 265.5s but failed schema validation on list-field variants; parser tolerance for single-string list fields and driver-object fields is implemented.
+31. First valid native Ollama row is captured for `mixed_earnings_beat_guidance_cut`: label match, grounded snippets, research-only language, partial driver coverage, and about 263.1s runtime.
+32. Two-fixture no-fallback mixed rerun produced native Ollama rows with no fallbacks: 1/2 label match, grounded snippets, partial driver quality, and about 174.5s-209.7s runtime per fixture.
+33. Ollama prompt is tightened for mixed-evidence labeling and driver discipline after the two-fixture run.
+34. Post-tune two-fixture rerun with `--ollama-timeout-seconds 120` timed out on both fixtures, confirming the larger local model cannot assess quality at shorter CPU timeouts.
+35. Smaller-model rerun with `llama3.2:3b` produced native no-fallback rows for both mixed fixtures: 2/2 label matches, grounded snippets, partial driver quality, and about 94.0s-101.1s runtime.
+36. 5-fixture no-fallback `llama3.2:3b` batch produced native rows with no fallbacks, 4/5 label matches, grounded snippets, partial driver quality, and about 78.7s-97.2s runtime.
+37. Prompt is tightened for weak-evidence neutrality and normalized driver categories after the 5-fixture miss.
+38. Next: rerun the 5-fixture no-fallback `llama3.2:3b` batch after the prompt tune, or implement `analysis_tracking_needs` if shifting from model-quality work back to product/data foundation.
 
 ## Suggested Recommendation To Explore Next
 
@@ -374,6 +382,7 @@ The current recommended architecture is:
 - Start market data with `yfinance` behind a provider interface.
 - Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
 - Continue model-quality work by rerunning the 5-fixture no-fallback `llama3.2:3b` comparison after weak-evidence and driver-normalization prompt tuning. Keep baseline default until fixture-level quality and runtime justify changing provider behavior.
+- If shifting back to product/data foundation, implement `analysis_tracking_needs` next so related assets/entities become first-class ticker-workspace suggestions before correlation work.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -402,5 +411,6 @@ When resuming:
 14. Read `docs/14-ticker-context-ingestion-plan.md`.
 15. Expand curated sentiment fixtures as new failure cases appear.
 16. Rerun the 5-fixture no-fallback `llama3.2:3b` comparison after the weak-evidence prompt tune before expanding to 10 or 20 fixtures.
-17. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
-18. Keep the UI and model outputs research-only and avoid buy/sell/hold language.
+17. Or, if prioritizing ticker-association product work, implement `analysis_tracking_needs` and expose related-asset suggestions in API responses.
+18. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
+19. Keep the UI and model outputs research-only and avoid buy/sell/hold language.
