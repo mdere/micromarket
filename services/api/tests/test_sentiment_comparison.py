@@ -95,6 +95,7 @@ def test_write_reports_creates_csv_and_markdown(tmp_path) -> None:
             "ollama_runtime_seconds": 1.2,
             "ollama_error": "",
             "ollama_failed_or_fell_back": False,
+            "ollama_native_label_match": False,
             "label_match_ollama": False,
             "snippet_quality": "",
             "driver_quality": "",
@@ -110,7 +111,8 @@ def test_write_reports_creates_csv_and_markdown(tmp_path) -> None:
     markdown = markdown_path.read_text(encoding="utf-8")
     assert "# Sentiment Provider Comparison" in markdown
     assert "Baseline label matches: 1/1" in markdown
-    assert "Ollama label matches: 0/1" in markdown
+    assert "Ollama native label matches: 0/1" in markdown
+    assert "Ollama or fallback label matches: 0/1" in markdown
     review = review_path.read_text(encoding="utf-8")
     assert "# Sentiment Provider Qualitative Review" in review
     assert "## example" in review
@@ -148,6 +150,7 @@ def test_compare_fixtures_leaves_ollama_match_blank_when_ollama_not_run() -> Non
     rows = compare_fixtures(fixtures, baseline_provider=baseline)
 
     assert rows[0]["ollama_provider"] == ""
+    assert rows[0]["ollama_native_label_match"] == ""
     assert rows[0]["label_match_ollama"] == ""
 
 

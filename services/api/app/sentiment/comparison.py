@@ -197,6 +197,11 @@ def _build_row(
         "ollama_runtime_seconds": round(ollama.runtime_seconds, 3) if ollama else "",
         "ollama_error": ollama.error if ollama and ollama.error else "",
         "ollama_failed_or_fell_back": _ollama_failed_or_fell_back(ollama_result, ollama),
+        "ollama_native_label_match": (
+            ollama_result.label == expected_label
+            if ollama_result and ollama_result.provider == "ollama"
+            else ""
+        ),
         "label_match_ollama": ollama_result.label == expected_label if ollama_result else "",
         "snippet_quality": "",
         "driver_quality": "",
@@ -230,7 +235,11 @@ def _write_csv(rows: list[dict[str, Any]], path: Path) -> None:
 def _write_markdown(rows: list[dict[str, Any]], path: Path) -> None:
     label_matches = sum(1 for row in rows if row["label_match_baseline"])
     ollama_rows = [row for row in rows if row["ollama_provider"] or row["ollama_error"]]
-    ollama_matches = sum(1 for row in ollama_rows if row["label_match_ollama"])
+    native_ollama_rows = [
+        row for row in ollama_rows if row["ollama_failed_or_fell_back"] is not True
+    ]
+    ollama_or_fallback_matches = sum(1 for row in ollama_rows if row["label_match_ollama"])
+    native_ollama_matches = sum(1 for row in native_ollama_rows if row["ollama_native_label_match"])
     ollama_fallbacks = sum(1 for row in ollama_rows if row["ollama_failed_or_fell_back"] is True)
     lines = [
         "# Sentiment Provider Comparison",
@@ -239,7 +248,12 @@ def _write_markdown(rows: list[dict[str, Any]], path: Path) -> None:
         f"Baseline label matches: {label_matches}/{len(rows)}",
     ]
     if ollama_rows:
-        lines.append(f"Ollama label matches: {ollama_matches}/{len(ollama_rows)}")
+        lines.append(
+            f"Ollama native label matches: {native_ollama_matches}/{len(native_ollama_rows)}"
+        )
+        lines.append(
+            f"Ollama or fallback label matches: {ollama_or_fallback_matches}/{len(ollama_rows)}"
+        )
         lines.append(f"Ollama failures/fallbacks: {ollama_fallbacks}/{len(ollama_rows)}")
     lines.extend(
         [
