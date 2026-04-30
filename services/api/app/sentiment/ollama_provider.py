@@ -97,7 +97,14 @@ class OllamaSentimentProvider:
             "drivers must be short categories such as earnings, guidance, demand, "
             "regulatory, valuation, macro, analyst_action, product, supply, or uncertainty. "
             "evidence_snippets must quote short article excerpts. limitations must include "
-            "important caveats. Do not include investment advice.\n\n"
+            "important caveats. Driver rules: include every materially relevant driver "
+            "category supported by the article; for a mixed label, include drivers and "
+            "evidence for both supportive and offsetting signals; do not include a driver "
+            "unless it is supported by an evidence snippet; use uncertainty when the article "
+            "uses may, could, unclear, limited conviction, cautious, or other confidence-limiting "
+            "language; use analyst_action for upgrades, downgrades, or price target changes; "
+            "use guidance for raised, lowered, cut, or warned guidance. Do not include "
+            "investment advice.\n\n"
             f"Article text:\n{article_text[:12000]}"
         )
 

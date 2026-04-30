@@ -1,6 +1,6 @@
 # micromarket Current State
 
-Last updated: 2026-04-29
+Last updated: 2026-04-30
 
 ## Purpose
 
@@ -142,7 +142,7 @@ The product is research-only decision support. It should not issue direct buy/se
   - Article responses include related entity metadata, relationship type, provider/model lineage, confidence, and evidence snippets.
   - Tests cover an `NVDA` article mentioning `TSMC`, `Samsung`, and `HBM`.
 - Curated sentiment fixture slice is implemented:
-  - `services/api/tests/fixtures/sentiment_curated_examples.json` contains deterministic positive, negative, neutral, mixed, weak-evidence, and negation examples.
+  - `services/api/tests/fixtures/sentiment_curated_examples.json` contains 20 deterministic examples across positive, negative, neutral, mixed, weak-evidence, negation, analyst-action, regulatory/product, supply-chain, related-entity, uncertainty, guidance-cut, and irrelevant-ticker cases.
   - `BaselineSentimentProvider` has been upgraded to `sentiment-lexicon-baseline` version `0.2.0`.
   - The baseline now includes finance-specific driver categories, phrase handling, basic negation, mixed-label detection, and uncertainty-adjusted confidence.
   - `notebooks/02_sentiment_baseline.ipynb` includes a fixture review section for exploratory provider comparison.
@@ -160,6 +160,16 @@ The product is research-only decision support. It should not issue direct buy/se
   - `python -m app.sentiment.comparison --include-ollama` reads curated sentiment fixtures and writes CSV/Markdown review reports under `data/reports`.
   - Reports include baseline/Ollama labels, scores, confidence, drivers, snippets, runtime, fallback/error fields, and blank qualitative review columns.
   - The generator also writes `sentiment_provider_review.md`, a VS Code-friendly per-fixture qualitative review worksheet.
+- First expanded baseline-vs-Ollama comparison run is documented:
+  - On 19 curated fixtures, baseline matched labels on 16/19 and Ollama matched labels on 18/19.
+  - Ollama had 3/19 fallback/timeouts and local CPU runtime ranged roughly 90.7s to 180.0s per fixture.
+  - Baseline covered 54/58 expected driver categories while Ollama covered 30/58, so Ollama's main weakness is structured driver completeness rather than label accuracy.
+  - Keep baseline as default; Ollama remains optional until runtime and structured driver completeness improve.
+- Sentiment comparison follow-up slice is implemented:
+  - Added `mixed_earnings_beat_guidance_cut`, bringing the curated fixture set to the initial 20-example floor.
+  - `python -m app.sentiment.comparison` now supports `--limit` and repeatable `--fixture-id` arguments so slow local Ollama runs can be reviewed in smaller batches.
+  - The Ollama prompt now asks for grounded driver coverage, both supportive and offsetting drivers for mixed labels, and no unsupported driver categories.
+  - Next work is to rerun a targeted mixed-fixture Ollama batch, then rerun the full 20-fixture comparison if driver quality improves.
 - Environment setup has been clarified:
   - The API reads process environment variables plus local `.env` files via `app/core/config.py`.
   - `services/api/.env.example` is the checked-in local API template; copy it to ignored `services/api/.env`.
@@ -316,7 +326,9 @@ The current work is implementing the first backend vertical slice:
 23. Curated sentiment fixtures and deterministic baseline scoring improvements are implemented.
 24. Optional Ollama sentiment provider is implemented behind `SentimentProvider`.
 25. Sentiment provider comparison report generator is implemented.
-26. Next: use generated comparison reports to expand curated fixtures and review Ollama quality before changing default provider behavior.
+26. First expanded baseline-vs-Ollama comparison run is documented.
+27. Sentiment comparison follow-up slice is implemented: 20th fixture, report batching controls, and Ollama driver prompt tuning.
+28. Next: rerun targeted mixed-fixture comparison, then full 20-fixture comparison if driver quality improves.
 
 ## Suggested Recommendation To Explore Next
 
@@ -333,7 +345,7 @@ The current recommended architecture is:
 - Also store next-close and 7-trading-day forecasts for later evaluation.
 - Start market data with `yfinance` behind a provider interface.
 - Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
-- Continue model-quality work by generating baseline-vs-Ollama comparison reports, reviewing qualitative failures, and expanding curated sentiment fixtures before changing default provider behavior.
+- Continue model-quality work by rerunning targeted mixed-fixture comparison, then the full 20-fixture baseline-vs-Ollama comparison if driver quality improves. Keep baseline default until fixture-level quality and runtime justify changing provider behavior.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -361,6 +373,6 @@ When resuming:
 13. Read `docs/13-model-quality-plan.md`.
 14. Read `docs/14-ticker-context-ingestion-plan.md`.
 15. Expand curated sentiment fixtures as new failure cases appear.
-16. Generate baseline-vs-Ollama sentiment comparison reports and review qualitative failures before changing the default provider.
+16. Rerun targeted mixed-fixture baseline-vs-Ollama comparison using `--fixture-id`, then rerun the full 20-fixture comparison if driver quality improves.
 17. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
 18. Keep the UI and model outputs research-only and avoid buy/sell/hold language.

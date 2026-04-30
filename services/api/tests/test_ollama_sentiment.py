@@ -48,6 +48,42 @@ def test_ollama_sentiment_scores_valid_json_response() -> None:
     assert result.evidence_snippets == ["AMD raised guidance."]
 
 
+def test_ollama_sentiment_prompt_requests_grounded_driver_coverage() -> None:
+    captured_payload = {}
+
+    def fake_post(*args, **kwargs) -> httpx.Response:
+        captured_payload.update(kwargs["json"])
+        return _response(
+            {
+                "message": {
+                    "content": json.dumps(
+                        {
+                            "label": "mixed",
+                            "score": 0.05,
+                            "confidence": 0.62,
+                            "drivers": ["demand", "supply", "uncertainty"],
+                            "evidence_snippets": ["demand improved but supply constraints remain"],
+                            "limitations": ["Single article."],
+                        }
+                    )
+                }
+            }
+        )
+
+    provider = OllamaSentimentProvider(post=fake_post)
+
+    provider.score_article("AMD demand improved but supply constraints remain.", ticker="AMD")
+
+    messages = captured_payload["messages"]
+    system_prompt = messages[0]["content"]
+    user_prompt = messages[1]["content"]
+    assert "Do not provide investment advice" in system_prompt
+    assert "Driver rules" in user_prompt
+    assert "for a mixed label" in user_prompt
+    assert "do not include a driver unless it is supported by an evidence snippet" in user_prompt
+    assert "use guidance for raised, lowered, cut, or warned guidance" in user_prompt
+
+
 def test_ollama_sentiment_rejects_invalid_json_without_fallback() -> None:
     def fake_post(*args, **kwargs) -> httpx.Response:
         return _response({"message": {"content": "not json"}})

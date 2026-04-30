@@ -18,7 +18,7 @@ It is not expected to be accurate enough for final research use.
 
 Current baseline version: `sentiment-lexicon-baseline` `0.2.0`.
 
-The first curated fixture set lives at `services/api/tests/fixtures/sentiment_curated_examples.json` and covers positive, negative, neutral, mixed, weak-evidence, and negated-positive cases. The baseline now emits finance-specific driver categories, detects mixed positive/negative articles, handles simple negation, and lowers confidence for uncertainty language. Continue expanding the fixture set whenever a new failure case appears.
+The curated fixture set lives at `services/api/tests/fixtures/sentiment_curated_examples.json` and currently includes 20 examples covering positive, negative, neutral, mixed, weak-evidence, negated-positive, analyst-action, regulatory/product, supply-chain, related-entity, uncertainty, guidance-cut, and irrelevant-ticker cases. The baseline now emits finance-specific driver categories, detects mixed positive/negative articles, handles simple negation, and lowers confidence for uncertainty language. Continue expanding the fixture set whenever a new failure case appears.
 
 ## Target Sentiment Output
 
@@ -90,7 +90,7 @@ Improve the current deterministic provider before adding a neural or LLM model:
 Acceptance criteria:
 
 - Existing tests remain deterministic and offline.
-- New fixtures cover positive, negative, neutral, mixed, and weak-evidence articles. Initial fixture set is implemented.
+- New fixtures cover positive, negative, neutral, mixed, and weak-evidence articles. Expanded fixture set is implemented with 20 examples.
 - Provider version increments, for example `lexicon-baseline-v0.2`. Current implemented version is `0.2.0`.
 
 ### Stage 2: Add Local LLM Sentiment Provider With Ollama
@@ -167,7 +167,8 @@ Run the comparison in phases:
 2. **Fixture comparison**
    - Use `services/api/tests/fixtures/sentiment_curated_examples.json` as the first labeled dataset.
    - Run `notebooks/02_sentiment_baseline.ipynb` with `RUN_OLLAMA_COMPARISON = True`.
-   - Or run `cd services/api && python -m app.sentiment.comparison --include-ollama` to write CSV/Markdown reports under `data/reports`.
+  - Or run `cd services/api && python -m app.sentiment.comparison --include-ollama` to write CSV/Markdown reports under `data/reports`.
+  - For slow local CPU runs, use `--limit N` or one or more `--fixture-id ID` arguments to compare a smaller batch before running the full fixture set.
    - Record per-example baseline and Ollama label, score, confidence, drivers, evidence snippets, limitations, runtime, and failures/fallbacks.
    - Expand the fixture set whenever either provider fails in an interesting way.
 
@@ -225,7 +226,7 @@ The CSV is useful for spreadsheet-style review. The review Markdown is easier to
 
 Initial decision thresholds before changing defaults:
 
-- At least 20 curated examples across positive, negative, neutral, mixed, weak-evidence, irrelevant-ticker, uncertainty, and negation cases.
+- At least 20 curated examples across positive, negative, neutral, mixed, weak-evidence, irrelevant-ticker, uncertainty, and negation cases. Current count is 20, which is enough for the first small comparison baseline.
 - Ollama label accuracy is better than baseline by at least 10 percentage points, or it materially improves mixed/neutral cases without hurting positive/negative cases.
 - Ollama evidence snippets are judged useful on at least 80% of examples.
 - Invalid JSON and fallback rate are low enough for local research use.
@@ -341,6 +342,74 @@ action:
 
 When reviewing, look for suspicious passes. A provider can get the label right for the wrong reason. For example, an output that labels an article `negative` because of "market crash risk" fails qualitative review if the article only mentioned a mild guidance cut and never discussed a crash.
 
+### First Expanded Comparison Run
+
+Run date: 2026-04-30.
+
+Command:
+
+```bash
+cd services/api
+python -m app.sentiment.comparison --include-ollama
+```
+
+Configuration notes:
+
+- Fixture count: 19.
+- Ollama model: configured local `OLLAMA_SENTIMENT_MODEL`.
+- `OLLAMA_TIMEOUT_SECONDS` was high enough for the full run to complete, but three rows still fell back to baseline after timeout.
+- Generated reports are local ignored artifacts under `data/reports`.
+
+Results:
+
+| Metric | Baseline | Ollama |
+| --- | ---: | ---: |
+| Label matches | 16/19 | 18/19 |
+| Fallbacks/timeouts | n/a | 3/19 |
+| Expected-driver coverage | 54/58 | 30/58 |
+| Rows with all expected drivers covered | 10/14 | 2/14 |
+| Runtime | near-instant | 90.7s min / 129.2s avg / 180.0s max |
+
+Interpretation:
+
+- Ollama improved label accuracy on this expanded fixture set, especially for cases that the lexical baseline mishandled:
+  - `irrelevant_positive_other_ticker`: baseline over-read positive NVDA language for AMD; Ollama correctly returned neutral.
+  - `negative_analyst_downgrade`: baseline softened the article to mixed; Ollama correctly returned negative.
+  - `uncertain_possible_guidance_pressure`: baseline softened the article to mixed; Ollama correctly returned negative.
+- Ollama still missed one hand label:
+  - `mixed_partner_strength_customer_delay`: expected mixed, Ollama returned negative. It captured supply/uncertainty risks but underweighted positive demand/backlog/upside language.
+- Ollama's main weakness is structured driver coverage, not label selection. It often returns plausible but incomplete drivers, and sometimes introduces broad or unsupported drivers such as `valuation`.
+- Runtime is still too slow for default API behavior on the current local CPU path. Keep Ollama optional and keep fallback enabled.
+- Three timeouts/fallbacks mean reported Ollama quality should be treated cautiously until runtime is more stable or the report can run in smaller batches.
+
+Recommended next actions:
+
+1. Add at least one more fixture to reach the initial 20-example threshold.
+2. Add batch controls to the report generator, such as `--limit` or `--fixture-id`, so local CPU runs can be reviewed incrementally.
+3. Tune the Ollama prompt for driver extraction:
+   - require all materially relevant expected driver categories,
+   - require both positive and negative drivers for mixed articles,
+   - forbid unsupported driver categories,
+   - ask for uncertainty language when it affects confidence.
+4. Keep `baseline` as the default provider for now. Ollama is promising for labels but not yet reliable enough on runtime and structured drivers.
+
+### First Follow-Up Prompt And Batching Slice
+
+Implemented after reviewing the first expanded comparison:
+
+- Fixture count increased from 19 to 20 with `mixed_earnings_beat_guidance_cut`, which covers an earnings beat offset by cut guidance, cautious demand, margin pressure, product adoption, and uncertainty.
+- The report generator now supports smaller local comparison runs:
+  - `python -m app.sentiment.comparison --include-ollama --limit 5`
+  - `python -m app.sentiment.comparison --include-ollama --fixture-id mixed_partner_strength_customer_delay`
+  - `python -m app.sentiment.comparison --include-ollama --fixture-id mixed_partner_strength_customer_delay --fixture-id mixed_earnings_beat_guidance_cut`
+- The Ollama prompt now explicitly asks for grounded driver coverage:
+  - include every materially relevant supported driver,
+  - include both supportive and offsetting drivers for mixed labels,
+  - do not include a driver unless an evidence snippet supports it,
+  - use `uncertainty`, `analyst_action`, and `guidance` for the relevant language.
+
+Next review step: rerun a small targeted Ollama batch on the two mixed fixtures first. If driver coverage improves without introducing unsupported categories, run the full 20-fixture comparison and update this section with the new metrics.
+
 ### Stage 4: Optional Hosted Research Environments
 
 Hosted notebooks can accelerate experiments, but they should not become MVP runtime dependencies.
@@ -393,8 +462,8 @@ Provider selection should happen in `app/sentiment/dependencies.py`.
 2. Write CSV and Markdown reports under `data/reports`. Done.
 3. Include blank human-review fields for snippet quality, driver quality, research-only check, review notes, and review action. Done.
 4. Generate a VS Code-friendly per-fixture review Markdown worksheet. Done.
-5. Use the report to expand fixtures to at least 20 examples before changing provider defaults.
-6. Promote repeated findings into provider tests and prompt/parser improvements.
+5. Use the report to expand fixtures and review provider quality before changing provider defaults. Initial 20-example floor is reached.
+6. Promote repeated findings into provider tests and prompt/parser improvements. First driver-extraction prompt tune is implemented.
 
 ## Guardrails
 

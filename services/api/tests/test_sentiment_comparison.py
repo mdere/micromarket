@@ -1,4 +1,6 @@
-from app.sentiment.comparison import compare_fixtures, write_reports
+import pytest
+
+from app.sentiment.comparison import compare_fixtures, select_fixtures, write_reports
 from app.sentiment.provider import SentimentResult
 
 
@@ -147,3 +149,32 @@ def test_compare_fixtures_leaves_ollama_match_blank_when_ollama_not_run() -> Non
 
     assert rows[0]["ollama_provider"] == ""
     assert rows[0]["label_match_ollama"] == ""
+
+
+def test_select_fixtures_filters_by_fixture_ids_in_fixture_order() -> None:
+    fixtures = [
+        {"id": "first"},
+        {"id": "second"},
+        {"id": "third"},
+    ]
+
+    selected = select_fixtures(fixtures, fixture_ids=["third", "first"])
+
+    assert [fixture["id"] for fixture in selected] == ["first", "third"]
+
+
+def test_select_fixtures_applies_limit_after_filtering() -> None:
+    fixtures = [
+        {"id": "first"},
+        {"id": "second"},
+        {"id": "third"},
+    ]
+
+    selected = select_fixtures(fixtures, fixture_ids=["first", "third"], limit=1)
+
+    assert [fixture["id"] for fixture in selected] == ["first"]
+
+
+def test_select_fixtures_rejects_unknown_fixture_id() -> None:
+    with pytest.raises(ValueError, match="missing"):
+        select_fixtures([{"id": "first"}], fixture_ids=["missing"])

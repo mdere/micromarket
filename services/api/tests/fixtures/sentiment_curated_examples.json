@@ -58,5 +58,159 @@
     "expected_score_min": -1.0,
     "expected_score_max": -0.2,
     "expected_drivers": ["demand", "earnings", "uncertainty"]
+  },
+  {
+    "id": "positive_analyst_upgrade_cloud_demand",
+    "ticker": "MSFT",
+    "title": "MSFT upgraded on cloud demand",
+    "text": "MSFT received an analyst upgrade after strong cloud demand and resilient revenue growth. The note cited a price target increase and improving enterprise adoption.",
+    "expected_label": "positive",
+    "expected_score_min": 0.35,
+    "expected_score_max": 1.0,
+    "expected_drivers": ["analyst_action", "demand", "earnings", "product"]
+  },
+  {
+    "id": "negative_regulatory_product_recall",
+    "ticker": "TSLA",
+    "title": "TSLA faces product and regulatory pressure",
+    "text": "TSLA faced a regulatory investigation after a product recall and warned of delays. Analysts described the issue as a negative risk for near-term demand.",
+    "expected_label": "negative",
+    "expected_score_min": -1.0,
+    "expected_score_max": -0.35,
+    "expected_drivers": ["demand", "guidance", "product", "regulatory", "supply", "uncertainty"]
+  },
+  {
+    "id": "mixed_guidance_regulatory_risk",
+    "ticker": "GOOGL",
+    "title": "GOOGL guidance improves while regulatory risk rises",
+    "text": "GOOGL raised guidance and reported margin expansion as advertising demand improved, but regulatory risk and an investigation created uncertainty around future growth.",
+    "expected_label": "mixed",
+    "expected_score_min": -0.35,
+    "expected_score_max": 0.35,
+    "expected_drivers": ["demand", "earnings", "guidance", "regulatory", "uncertainty"]
+  },
+  {
+    "id": "irrelevant_positive_other_ticker",
+    "ticker": "AMD",
+    "title": "NVDA upgrade does not discuss AMD",
+    "text": "NVIDIA received an analyst upgrade after strong data-center demand and revenue growth. The article did not mention AMD operations, guidance, products, or market share.",
+    "expected_label": "neutral",
+    "expected_score_min": -0.2,
+    "expected_score_max": 0.2,
+    "expected_drivers": [],
+    "expected_baseline_label": "positive",
+    "expected_baseline_score_min": 0.35,
+    "expected_baseline_score_max": 1.0,
+    "expected_baseline_drivers": ["demand", "earnings"]
+  },
+  {
+    "id": "negative_demand_slowdown_inventory",
+    "ticker": "INTC",
+    "title": "INTC warns of demand slowdown",
+    "text": "INTC warned that a demand slowdown and weaker enterprise orders created margin pressure. Management also cut guidance because inventory constraints delayed shipments.",
+    "expected_label": "negative",
+    "expected_score_min": -1.0,
+    "expected_score_max": -0.35,
+    "expected_drivers": ["demand", "earnings", "guidance", "supply"]
+  },
+  {
+    "id": "neutral_conference_schedule",
+    "ticker": "AMZN",
+    "title": "AMZN announces conference schedule",
+    "text": "AMZN announced the date and speaker list for an upcoming developer conference. The update summarized session topics and registration details without financial outlook commentary.",
+    "expected_label": "neutral",
+    "expected_score_min": -0.2,
+    "expected_score_max": 0.2,
+    "expected_drivers": []
+  },
+  {
+    "id": "positive_cash_flow_margin_expansion",
+    "ticker": "META",
+    "title": "META margins and cash flow improve",
+    "text": "META reported margin expansion, free cash flow growth, and improved advertising demand. Management described stable expenses and stronger engagement across core products.",
+    "expected_label": "positive",
+    "expected_score_min": 0.35,
+    "expected_score_max": 1.0,
+    "expected_drivers": ["demand", "earnings", "product"],
+    "expected_baseline_drivers": ["demand", "earnings"]
+  },
+  {
+    "id": "mixed_upgrade_valuation_constraints",
+    "ticker": "AVGO",
+    "title": "AVGO upgraded despite valuation and supply concerns",
+    "text": "AVGO received an analyst upgrade after market share gains and strong backlog, but valuation concerns and supply constraints limited conviction. The article described upside while warning that demand could slow.",
+    "expected_label": "mixed",
+    "expected_score_min": -0.35,
+    "expected_score_max": 0.35,
+    "expected_drivers": ["analyst_action", "demand", "supply", "uncertainty", "valuation"],
+    "expected_baseline_drivers": ["demand", "supply", "uncertainty", "valuation"]
+  },
+  {
+    "id": "negative_analyst_downgrade",
+    "ticker": "NFLX",
+    "title": "NFLX downgraded on growth concerns",
+    "text": "NFLX was hit with an analyst downgrade after subscriber growth declined and valuation concerns increased. The note warned that weaker demand could pressure profit.",
+    "expected_label": "negative",
+    "expected_score_min": -1.0,
+    "expected_score_max": -0.35,
+    "expected_drivers": ["analyst_action", "demand", "earnings", "guidance", "valuation"],
+    "expected_baseline_label": "mixed",
+    "expected_baseline_score_min": -0.45,
+    "expected_baseline_score_max": -0.2
+  },
+  {
+    "id": "weak_evidence_product_launch",
+    "ticker": "AAPL",
+    "title": "AAPL launches accessory colors",
+    "text": "AAPL introduced new accessory colors and updated product photos on its website.",
+    "expected_label": "neutral",
+    "expected_score_min": -0.2,
+    "expected_score_max": 0.2,
+    "expected_drivers": []
+  },
+  {
+    "id": "uncertain_possible_guidance_pressure",
+    "ticker": "ORCL",
+    "title": "ORCL demand signals remain unclear",
+    "text": "ORCL demand trends were unclear as customers could delay cloud projects. Analysts said possible margin pressure may affect guidance, although no formal warning was issued.",
+    "expected_label": "negative",
+    "expected_score_min": -1.0,
+    "expected_score_max": -0.2,
+    "expected_drivers": ["demand", "earnings", "guidance", "uncertainty"],
+    "expected_baseline_label": "mixed",
+    "expected_baseline_score_min": -0.35,
+    "expected_baseline_score_max": -0.2,
+    "expected_baseline_drivers": ["demand", "earnings", "guidance", "supply"]
+  },
+  {
+    "id": "related_supplier_positive_context",
+    "ticker": "NVDA",
+    "title": "TSMC capacity supports NVDA AI chip supply",
+    "text": "TSMC expanded foundry capacity for AI chips, improving supply visibility for NVDA accelerators. The article cited resilient demand and stronger HBM adoption.",
+    "expected_label": "positive",
+    "expected_score_min": 0.35,
+    "expected_score_max": 1.0,
+    "expected_drivers": ["demand", "product", "supply"],
+    "expected_baseline_drivers": ["demand", "earnings", "product"]
+  },
+  {
+    "id": "mixed_partner_strength_customer_delay",
+    "ticker": "AMD",
+    "title": "AMD partner demand strong but customer delays rise",
+    "text": "AMD partner checks showed strong AI chip demand and improved backlog, but customer delays and supply constraints created uncertainty. Analysts said upside remains possible but conviction is limited.",
+    "expected_label": "mixed",
+    "expected_score_min": -0.35,
+    "expected_score_max": 0.35,
+    "expected_drivers": ["demand", "earnings", "supply", "uncertainty", "valuation"]
+  },
+  {
+    "id": "mixed_earnings_beat_guidance_cut",
+    "ticker": "CRM",
+    "title": "CRM beats earnings but cuts guidance",
+    "text": "CRM beat quarterly earnings expectations and reported free cash flow growth, but management cut guidance after cautious enterprise demand and margin pressure. Analysts said product adoption remained strong while uncertainty stayed elevated.",
+    "expected_label": "mixed",
+    "expected_score_min": -0.35,
+    "expected_score_max": 0.35,
+    "expected_drivers": ["demand", "earnings", "guidance", "product", "uncertainty"]
   }
 ]

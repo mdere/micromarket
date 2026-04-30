@@ -29,6 +29,25 @@ def load_fixtures(path: Path) -> list[dict[str, Any]]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def select_fixtures(
+    fixtures: list[dict[str, Any]],
+    *,
+    fixture_ids: list[str] | None = None,
+    limit: int | None = None,
+) -> list[dict[str, Any]]:
+    selected = fixtures
+    if fixture_ids:
+        requested_ids = set(fixture_ids)
+        available_ids = {fixture["id"] for fixture in fixtures}
+        missing_ids = sorted(requested_ids - available_ids)
+        if missing_ids:
+            raise ValueError(f"Unknown fixture id(s): {', '.join(missing_ids)}")
+        selected = [fixture for fixture in fixtures if fixture["id"] in requested_ids]
+    if limit is not None:
+        selected = selected[:limit]
+    return selected
+
+
 def compare_fixtures(
     fixtures: list[dict[str, Any]],
     *,
@@ -89,13 +108,36 @@ def main() -> None:
         action="store_true",
         help="Also call the configured local Ollama sentiment provider.",
     )
+    parser.add_argument(
+        "--fixture-id",
+        action="append",
+        dest="fixture_ids",
+        help="Only compare this fixture id. May be repeated.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Only compare the first N fixtures after any fixture-id filtering.",
+    )
     args = parser.parse_args()
+    if args.limit is not None and args.limit < 1:
+        parser.error("--limit must be at least 1.")
 
     settings = Settings()
     baseline_provider = BaselineSentimentProvider()
     ollama_provider = build_ollama_provider(settings) if args.include_ollama else None
+    fixtures = load_fixtures(args.fixtures)
+    try:
+        selected_fixtures = select_fixtures(
+            fixtures,
+            fixture_ids=args.fixture_ids,
+            limit=args.limit,
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
     rows = compare_fixtures(
-        load_fixtures(args.fixtures),
+        selected_fixtures,
         baseline_provider=baseline_provider,
         ollama_provider=ollama_provider,
     )

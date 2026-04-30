@@ -88,9 +88,13 @@ def test_baseline_sentiment_curated_fixtures(example: dict) -> None:
     provider = BaselineSentimentProvider()
 
     result = provider.score_article(example["text"], ticker=example["ticker"])
+    expected_label = example.get("expected_baseline_label", example["expected_label"])
+    expected_score_min = example.get("expected_baseline_score_min", example["expected_score_min"])
+    expected_score_max = example.get("expected_baseline_score_max", example["expected_score_max"])
+    expected_drivers = example.get("expected_baseline_drivers", example["expected_drivers"])
 
     assert result.model_version == "0.2.0"
-    assert result.label == example["expected_label"]
-    assert example["expected_score_min"] <= result.score <= example["expected_score_max"]
-    for expected_driver in example["expected_drivers"]:
+    assert result.label == expected_label
+    assert expected_score_min <= result.score <= expected_score_max
+    for expected_driver in expected_drivers:
         assert any(driver.startswith(f"{expected_driver}:") for driver in result.drivers)

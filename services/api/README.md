@@ -544,6 +544,16 @@ source .venv/bin/activate
 python -m app.sentiment.comparison --include-ollama
 ```
 
+For slower local CPU runs, compare a smaller batch first:
+
+```bash
+python -m app.sentiment.comparison --include-ollama --limit 5
+python -m app.sentiment.comparison --include-ollama --fixture-id mixed_partner_strength_customer_delay
+python -m app.sentiment.comparison --include-ollama \
+  --fixture-id mixed_partner_strength_customer_delay \
+  --fixture-id mixed_earnings_beat_guidance_cut
+```
+
 Outputs:
 
 - `../../data/reports/sentiment_provider_comparison.csv`
