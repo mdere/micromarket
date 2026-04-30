@@ -82,8 +82,13 @@ def test_ollama_sentiment_prompt_requests_grounded_driver_coverage() -> None:
     assert "for a mixed label" in user_prompt
     assert "material positive signals and material negative signals both appear" in user_prompt
     assert "strong demand, backlog, upside, adoption, growth, or improved results" in user_prompt
+    assert "Label an article neutral when it only reports" in user_prompt
+    assert "Do not treat a product event or launch as positive" in user_prompt
+    assert "Only use driver categories from this exact set" in user_prompt
+    assert "Map backlog and order trends to demand" in user_prompt
+    assert "do not return backlog, operations, event, launch, or operational update" in user_prompt
     assert "do not include a driver unless it is supported by an evidence snippet" in user_prompt
-    assert "Use product for product adoption" in user_prompt
+    assert "Use product for financially material product adoption" in user_prompt
     assert "Use valuation only for explicit valuation" in user_prompt
     assert "Use analyst_action only for analyst upgrades" in user_prompt
     assert "use guidance for raised, lowered, cut, or warned guidance" in user_prompt

@@ -424,7 +424,11 @@ A post-tune two-fixture no-fallback rerun with `--ollama-timeout-seconds 120` ti
 
 A smaller-model rerun with `--ollama-model llama3.2:3b --ollama-timeout-seconds 120` produced native rows for both mixed fixtures with no fallbacks. Ollama matched 2/2 labels, returned grounded snippets, and stayed research-only. Runtime improved enough to complete under 120 seconds, but remains slow at about 94.0s-101.1s per fixture. Driver quality is still partial: `backlog` appeared as an unnormalized driver, and expected `earnings`, `supply`, `valuation`, `product`, and `uncertainty` were missing across the two rows.
 
-Next review step: do not run the full 20-fixture comparison yet. Run a small 5-fixture no-fallback batch with `llama3.2:3b` first. If labels/snippets remain good and runtime is acceptable enough for experimentation, then try the full fixture set or wait for GPU-backed Ollama before broader evaluation.
+A 5-fixture no-fallback `llama3.2:3b` batch produced native rows for all five fixtures with no fallbacks, 4/5 label matches, grounded snippets, and research-only language. Runtime stayed slow but bounded at about 78.7s-97.2s per fixture. The miss was `weak_evidence_short_note`: expected neutral, but Ollama labeled a simple product event positive with score `0.7`. Driver quality remains partial: Ollama omitted expected drivers, added unsupported/unnormalized drivers such as `operational update` and `backlog`, and sometimes used `guidance` without explicit guidance evidence.
+
+The prompt is now tightened for weak-evidence neutrality and driver normalization: routine operations and product events without financial evidence should be neutral; product events are not positive unless connected to demand, revenue, adoption, margins, market share, or guidance; drivers must come from the normalized category set; backlog and order trends should map to `demand`.
+
+Next review step: rerun the 5-fixture no-fallback `llama3.2:3b` batch after the prompt tune. If weak-evidence neutrality and driver normalization improve while labels/snippets remain good, then try a 10-fixture batch or wait for GPU-backed Ollama before broader evaluation.
 
 ### Stage 4: Optional Hosted Research Environments
 
