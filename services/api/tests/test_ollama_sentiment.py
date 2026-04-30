@@ -80,7 +80,12 @@ def test_ollama_sentiment_prompt_requests_grounded_driver_coverage() -> None:
     assert "Do not provide investment advice" in system_prompt
     assert "Driver rules" in user_prompt
     assert "for a mixed label" in user_prompt
+    assert "material positive signals and material negative signals both appear" in user_prompt
+    assert "strong demand, backlog, upside, adoption, growth, or improved results" in user_prompt
     assert "do not include a driver unless it is supported by an evidence snippet" in user_prompt
+    assert "Use product for product adoption" in user_prompt
+    assert "Use valuation only for explicit valuation" in user_prompt
+    assert "Use analyst_action only for analyst upgrades" in user_prompt
     assert "use guidance for raised, lowered, cut, or warned guidance" in user_prompt
 
 

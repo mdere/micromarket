@@ -418,7 +418,9 @@ The next single-fixture no-fallback run produced the first valid native Ollama r
 
 The two-fixture no-fallback mixed rerun produced native Ollama rows for both fixtures with no fallbacks. Ollama matched 1/2 labels: it correctly labeled `mixed_earnings_beat_guidance_cut` as mixed, but mislabeled `mixed_partner_strength_customer_delay` as negative by underweighting positive backlog/upside evidence. Snippets were grounded and research-only. Driver quality remained partial: Ollama missed expected drivers such as `earnings`, `valuation`, and `product`, and added unsupported `valuation` and `analyst_action` drivers on the CRM fixture. Runtime was still too high for default behavior at about 174.5s-209.7s per fixture.
 
-Next review step: do not run the full 20-fixture comparison yet. First reduce runtime, likely by trying a smaller local model, and tighten mixed-evidence driver behavior. Then rerun the two mixed fixtures before expanding to a larger batch.
+The prompt is now tightened for this failure mode: material positive and negative evidence should produce `mixed`, backlog/upside/adoption/growth should be treated as positive offsets, product adoption should map to `product`, and `valuation` / `analyst_action` should only be used when explicit evidence supports them.
+
+Next review step: do not run the full 20-fixture comparison yet. First reduce runtime, likely by trying a smaller local model or GPU-backed Ollama path, and rerun the two mixed fixtures after the prompt tune before expanding to a larger batch.
 
 ### Stage 4: Optional Hosted Research Environments
 
