@@ -172,7 +172,9 @@ The product is research-only decision support. It should not issue direct buy/se
   - The Ollama prompt now asks for grounded driver coverage, both supportive and offsetting drivers for mixed labels, and no unsupported driver categories.
   - A targeted two-fixture mixed-case rerun was attempted after the prompt tune, but both Ollama calls timed out at about 180 seconds and fell back to baseline. The returned labels/drivers matched the expected fixtures because they were baseline fallback outputs, not native Ollama outputs.
   - The report summary now separates native Ollama label matches from Ollama-or-fallback label matches so timeout fallback rows are not mistaken for provider-quality wins.
-  - Next work is operational: use the new CLI overrides to get one native Ollama row, for example by disabling fallback for one fixture, using a smaller local model, increasing timeout only if acceptable, or warming the model before the run.
+  - A follow-up single-fixture no-fallback run reached Ollama after about 244.7 seconds, but the provider rejected the response because `limitations` was returned as a string instead of a list. This means the runtime path can respond, but local CPU latency is very high and schema compliance is fragile.
+  - The Ollama parser now accepts common single-string list fields, converting single `evidence_snippets` and `limitations` strings into one-item lists and comma-separated `drivers` strings into driver lists.
+  - Next work is to rerun the same single fixture with `--ollama-no-fallback`; if it produces a native Ollama row, inspect label, drivers, evidence snippets, and research-only language before expanding to two mixed fixtures.
 - Environment setup has been clarified:
   - The API reads process environment variables plus local `.env` files via `app/core/config.py`.
   - `services/api/.env.example` is the checked-in local API template; copy it to ignored `services/api/.env`.
@@ -332,7 +334,8 @@ The current work is implementing the first backend vertical slice:
 26. First expanded baseline-vs-Ollama comparison run is documented.
 27. Sentiment comparison follow-up slice is implemented: 20th fixture, report batching controls, Ollama runtime overrides, and Ollama driver prompt tuning.
 28. Targeted two-fixture rerun after prompt tuning timed out on both Ollama calls and fell back to baseline; report summaries now distinguish native Ollama matches from fallback matches.
-29. Next: use the comparison CLI runtime overrides to produce at least one native Ollama row, then rerun targeted mixed-fixture comparison before the full 20-fixture comparison.
+29. Single-fixture no-fallback run reached Ollama after about 244.7 seconds but failed schema validation because `limitations` was a string instead of a list; parser tolerance for single-string list fields is implemented.
+30. Next: rerun the same single fixture with `--ollama-no-fallback`, then inspect native Ollama label, drivers, snippets, and research-only language before expanding to two mixed fixtures.
 
 ## Suggested Recommendation To Explore Next
 
@@ -349,7 +352,7 @@ The current recommended architecture is:
 - Also store next-close and 7-trading-day forecasts for later evaluation.
 - Start market data with `yfinance` behind a provider interface.
 - Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
-- Continue model-quality work by using comparison CLI runtime overrides to produce native Ollama rows, then rerunning targeted mixed-fixture comparison. Run the full 20-fixture baseline-vs-Ollama comparison only after the targeted run produces non-fallback Ollama outputs. Keep baseline default until fixture-level quality and runtime justify changing provider behavior.
+- Continue model-quality work by rerunning the single-fixture no-fallback Ollama comparison after parser tolerance improvements. Run the two-fixture mixed comparison only after the targeted run produces a valid native Ollama output. Keep baseline default until fixture-level quality and runtime justify changing provider behavior.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -377,6 +380,6 @@ When resuming:
 13. Read `docs/13-model-quality-plan.md`.
 14. Read `docs/14-ticker-context-ingestion-plan.md`.
 15. Expand curated sentiment fixtures as new failure cases appear.
-16. Use comparison CLI runtime overrides to avoid fallback rows, rerun targeted mixed-fixture baseline-vs-Ollama comparison using `--fixture-id`, then rerun the full 20-fixture comparison if driver quality improves.
+16. Rerun the single-fixture no-fallback Ollama comparison, inspect the native output quality, then rerun targeted mixed-fixture baseline-vs-Ollama comparison using `--fixture-id` if the single fixture succeeds.
 17. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
 18. Keep the UI and model outputs research-only and avoid buy/sell/hold language.

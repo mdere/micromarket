@@ -104,6 +104,35 @@ def test_ollama_sentiment_rejects_missing_required_fields() -> None:
         provider.score_article("AMD demand improved.", ticker="AMD")
 
 
+def test_ollama_sentiment_accepts_single_string_list_fields() -> None:
+    def fake_post(*args, **kwargs) -> httpx.Response:
+        return _response(
+            {
+                "message": {
+                    "content": json.dumps(
+                        {
+                            "label": "mixed",
+                            "score": 0.05,
+                            "confidence": 0.62,
+                            "drivers": "demand, guidance, uncertainty",
+                            "evidence_snippets": "CRM beat earnings but cut guidance.",
+                            "limitations": "Single article.",
+                        }
+                    )
+                }
+            }
+        )
+
+    provider = OllamaSentimentProvider(post=fake_post)
+
+    result = provider.score_article("CRM beat earnings but cut guidance.", ticker="CRM")
+
+    assert result.label == "mixed"
+    assert result.drivers == ["demand", "guidance", "uncertainty"]
+    assert result.evidence_snippets == ["CRM beat earnings but cut guidance."]
+    assert result.limitations == ["Single article."]
+
+
 def test_ollama_sentiment_falls_back_to_baseline_on_timeout() -> None:
     def fake_post(*args, **kwargs) -> httpx.Response:
         raise httpx.TimeoutException("timed out")

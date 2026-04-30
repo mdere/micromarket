@@ -412,7 +412,9 @@ Implemented after reviewing the first expanded comparison:
   - do not include a driver unless an evidence snippet supports it,
   - use `uncertainty`, `analyst_action`, and `guidance` for the relevant language.
 
-Next review step: get one native, non-fallback Ollama row before judging prompt quality. Run one mixed fixture with `--ollama-no-fallback`; if it still times out, reduce runtime pressure by using a smaller local model or increasing timeout only if that is acceptable for local research. After native Ollama rows are available, rerun the two mixed fixtures and then the full 20-fixture comparison.
+A single-fixture no-fallback run on `mixed_earnings_beat_guidance_cut` reached Ollama after about 244.7 seconds, but the provider rejected the response because `limitations` was returned as a string instead of a list. That is progress over timeout-only failures: the local path can produce a response, but runtime remains very slow and schema compliance is fragile. The parser now tolerates common single-string list fields while preserving the structured provider contract internally.
+
+Next review step: rerun `mixed_earnings_beat_guidance_cut` with `--ollama-no-fallback`. If it produces a native Ollama row, inspect label, drivers, evidence snippets, limitations, and research-only language before expanding to the two mixed fixtures and then the full 20-fixture comparison.
 
 ### Stage 4: Optional Hosted Research Environments
 
