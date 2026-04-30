@@ -414,7 +414,9 @@ Implemented after reviewing the first expanded comparison:
 
 Single-fixture no-fallback runs on `mixed_earnings_beat_guidance_cut` reached Ollama after about 244.7 seconds and 265.5 seconds, but the provider rejected the responses because list fields did not always match the strict `list[str]` schema. That is progress over timeout-only failures: the local path can produce responses, but runtime remains very slow and schema compliance is fragile. The parser now tolerates common list-field variants while preserving the structured provider contract internally: single strings become one-item lists, comma-separated driver strings become driver lists, and driver objects with `driver`, `category`, `name`, or `type` keys become plain driver strings.
 
-Next review step: rerun `mixed_earnings_beat_guidance_cut` with `--ollama-no-fallback`. If it produces a native Ollama row, inspect label, drivers, evidence snippets, limitations, and research-only language before expanding to the two mixed fixtures and then the full 20-fixture comparison.
+The next single-fixture no-fallback run produced the first valid native Ollama row after about 263.1 seconds. Ollama matched the expected `mixed` label with score `-0.33`, returned grounded snippets, stayed research-only, and covered `earnings`, `guidance`, `demand`, and `uncertainty`. It missed the expected `product` driver, so qualitative assessment is snippet quality `pass`, driver quality `partial`, research-only `pass`. Runtime remains much too slow for default API behavior on the current local CPU path. The parser now also strips extra wrapping quote characters from evidence snippets.
+
+Next review step: rerun the two mixed fixtures with `--ollama-no-fallback`, inspect native label quality, driver coverage, snippets, and runtime, then decide whether to try a larger batch or first reduce runtime with a smaller local model.
 
 ### Stage 4: Optional Hosted Research Environments
 

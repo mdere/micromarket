@@ -208,10 +208,17 @@ class OllamaSentimentProvider:
 
     def _list_item_to_string(self, item: Any, field_name: str) -> str:
         if isinstance(item, str):
-            return item.strip()
+            return self._clean_list_item(item, field_name)
         if field_name == "drivers" and isinstance(item, dict):
             for key in ("driver", "category", "name", "type"):
                 value = item.get(key)
                 if isinstance(value, str) and value.strip():
-                    return value.strip()
+                    return self._clean_list_item(value, field_name)
         raise SentimentProviderError(f"Ollama field {field_name} must be a list of strings.")
+
+    def _clean_list_item(self, value: str, field_name: str) -> str:
+        item = value.strip()
+        if field_name == "evidence_snippets" and len(item) >= 2:
+            if (item[0] == item[-1] == '"') or (item[0] == item[-1] == "'"):
+                return item[1:-1].strip()
+        return item

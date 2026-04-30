@@ -163,6 +163,38 @@ def test_ollama_sentiment_accepts_driver_objects() -> None:
     assert result.drivers == ["earnings", "guidance", "uncertainty"]
 
 
+def test_ollama_sentiment_strips_wrapping_quotes_from_evidence_snippets() -> None:
+    def fake_post(*args, **kwargs) -> httpx.Response:
+        return _response(
+            {
+                "message": {
+                    "content": json.dumps(
+                        {
+                            "label": "mixed",
+                            "score": 0.05,
+                            "confidence": 0.62,
+                            "drivers": ["earnings", "guidance"],
+                            "evidence_snippets": [
+                                '"CRM beat quarterly earnings expectations"',
+                                "'management cut guidance'",
+                            ],
+                            "limitations": ["Single article."],
+                        }
+                    )
+                }
+            }
+        )
+
+    provider = OllamaSentimentProvider(post=fake_post)
+
+    result = provider.score_article("CRM beat earnings but cut guidance.", ticker="CRM")
+
+    assert result.evidence_snippets == [
+        "CRM beat quarterly earnings expectations",
+        "management cut guidance",
+    ]
+
+
 def test_ollama_sentiment_rejects_non_string_evidence_snippet_items() -> None:
     def fake_post(*args, **kwargs) -> httpx.Response:
         return _response(
