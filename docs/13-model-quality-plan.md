@@ -420,7 +420,9 @@ The two-fixture no-fallback mixed rerun produced native Ollama rows for both fix
 
 The prompt is now tightened for this failure mode: material positive and negative evidence should produce `mixed`, backlog/upside/adoption/growth should be treated as positive offsets, product adoption should map to `product`, and `valuation` / `analyst_action` should only be used when explicit evidence supports them.
 
-Next review step: do not run the full 20-fixture comparison yet. First reduce runtime, likely by trying a smaller local model or GPU-backed Ollama path, and rerun the two mixed fixtures after the prompt tune before expanding to a larger batch.
+A post-tune two-fixture no-fallback rerun with `--ollama-timeout-seconds 120` timed out on both fixtures, so it did not produce native rows for quality assessment. This confirms CPU runtime is still the immediate blocker at shorter timeouts.
+
+Next review step: do not run the full 20-fixture comparison yet. First reduce runtime with a smaller local model or GPU-backed Ollama path. For CPU diagnostics only, keep `--ollama-timeout-seconds 300` when rerunning targeted mixed fixtures, then expand only if quality and runtime are acceptable.
 
 ### Stage 4: Optional Hosted Research Environments
 
