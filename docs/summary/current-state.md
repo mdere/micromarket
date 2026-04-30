@@ -151,7 +151,8 @@ The product is research-only decision support. It should not issue direct buy/se
   - The web ticker workspace now shows a `Related Signals` panel, and ticker-backed suggestions are clickable to load that ticker workspace.
   - `PATCH /analyses/tracking-needs/{tracking_need_id}` now updates tracking need status across `suggested`, `accepted`, `ignored`, and `tracked`.
   - The web `Related Signals` panel now exposes Accept, Tracked, and Ignore actions and updates the selected analysis in place.
-  - Next backend follow-up should add related ticker onboarding from accepted or tracked suggestions.
+  - Accepted or tracked ticker-backed suggestions now create or reuse the related `Asset`, link it to the tracking need, and backfill market history over the configured lookback window.
+  - Next follow-up should add a durable related-workspace list so onboarded assets can be browsed before they have analyses of their own.
   - Correlation/proportional-impact analysis should wait until related assets have their own sentiment and market-history observations.
 - Curated sentiment fixture slice is implemented:
   - `services/api/tests/fixtures/sentiment_curated_examples.json` contains 20 deterministic examples across positive, negative, neutral, mixed, weak-evidence, negation, analyst-action, regulatory/product, supply-chain, related-entity, uncertainty, guidance-cut, and irrelevant-ticker cases.

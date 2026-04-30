@@ -36,6 +36,8 @@ export type TrackingNeedResponse = {
   symbol: string | null;
   canonical_name: string;
   suggested_symbol: string | null;
+  related_asset_id: string | null;
+  onboarding_status: string;
   tracking_type: string;
   reason: string;
   evidence_snippets: string[];

@@ -44,6 +44,7 @@ export function RelatedSignalsPanel({
                   <span>{need.tracking_type.replace(/_/g, " ")}</span>
                   <span>priority {need.priority_score}</span>
                   <span>{need.status}</span>
+                  <span>{need.onboarding_status.replace(/_/g, " ")}</span>
                 </div>
                 <div className="related-signal-actions" aria-label={`Actions for ${need.name}`}>
                   <button

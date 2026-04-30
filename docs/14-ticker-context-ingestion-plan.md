@@ -224,10 +224,11 @@ Already implemented:
 - Article responses include extracted entities, relationship type, confidence, evidence snippets, and extraction lineage.
 - Ticker workspaces already group repeated analyses and article history by primary ticker.
 - `analysis_tracking_needs` records per-analysis related-signal suggestions with status, priority, reason, evidence, and provider/model lineage.
+- Accepted or tracked ticker-backed suggestions create or reuse a linked related `Asset` and backfill that ticker's market history through the configured market-data provider.
 
 Not yet implemented:
 
-- Automatic market-history onboarding for related tickers suggested by an analysis.
+- A durable related-ticker workspace list beyond analyses and per-analysis tracking signals.
 - Correlation or proportional-impact analysis between a primary ticker and related assets.
 
 ### Proposed Data Addition: `analysis_tracking_needs`
@@ -315,11 +316,12 @@ Implementation status:
 - Related ticker suggestions with symbols are clickable and load that ticker workspace.
 - `PATCH /analyses/tracking-needs/{tracking_need_id}` lets a user mark a suggestion as `suggested`, `accepted`, `ignored`, or `tracked`.
 - The web `Related Signals` panel exposes Accept, Tracked, and Ignore actions and updates the selected analysis without rerunning sentiment or forecasts.
+- Accepted or tracked ticker-backed suggestions now create or reuse the related `Asset`, link it to the tracking need, and backfill market history over the configured lookback window.
 
 Next follow-up:
 
-1. Add related ticker onboarding from accepted tracking needs.
-2. Decide whether `tracked` should create or update a durable relationship/workspace record beyond the per-analysis status.
+1. Add a durable related-workspace list so onboarded assets can be browsed even before they have analyses of their own.
+2. Decide whether `tracked` should create or update a durable cross-asset relationship record beyond the per-analysis status.
 3. Expand the deterministic entity dictionary with more ticker aliases and relationship seeds.
 4. Add tests for repeated mentions raising or preserving priority across analyses.
 5. Add later descriptive related-asset movement/sentiment comparison once enough related workspaces have observations.

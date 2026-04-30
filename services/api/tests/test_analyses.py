@@ -305,6 +305,8 @@ def test_create_analysis_extracts_related_entities(tmp_path) -> None:
         tracking_needs = created["tracking_needs"]
         tracking_by_name = {need["name"]: need for need in tracking_needs}
         assert tracking_by_name["TSMC"]["suggested_symbol"] == "TSM"
+        assert tracking_by_name["TSMC"]["related_asset_id"] is None
+        assert tracking_by_name["TSMC"]["onboarding_status"] == "pending"
         assert tracking_by_name["TSMC"]["tracking_type"] == "supplier"
         assert tracking_by_name["TSMC"]["status"] == "suggested"
         assert "supplier connected" in tracking_by_name["TSMC"]["reason"]
@@ -315,6 +317,7 @@ def test_create_analysis_extracts_related_entities(tmp_path) -> None:
         assert tracking_by_name["Samsung"]["tracking_type"] == "supplier"
         assert tracking_by_name["HBM"]["tracking_type"] == "product_theme"
         assert tracking_by_name["HBM"]["suggested_symbol"] is None
+        assert tracking_by_name["HBM"]["onboarding_status"] == "not_applicable"
         assert tracking_by_name["TSMC"]["provider"] == "deterministic"
         assert tracking_by_name["TSMC"]["model_name"] == "tracking-needs-baseline"
     finally:
@@ -351,9 +354,14 @@ def test_update_tracking_need_status(tmp_path) -> None:
         assert updated.status_code == 200
         assert updated.json()["id"] == tracking_need["id"]
         assert updated.json()["status"] == "accepted"
+        assert updated.json()["related_asset_id"] is not None
+        assert updated.json()["onboarding_status"] == "onboarded"
         fetched = client.get(f"/analyses/{response.json()['id']}")
         fetched_needs = {need["id"]: need for need in fetched.json()["tracking_needs"]}
         assert fetched_needs[tracking_need["id"]]["status"] == "accepted"
+        assert fetched_needs[tracking_need["id"]]["related_asset_id"] == updated.json()[
+            "related_asset_id"
+        ]
     finally:
         app.dependency_overrides.clear()
 

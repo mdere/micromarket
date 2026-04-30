@@ -311,6 +311,8 @@ def update_tracking_need_status(
     tracking_need_id: str,
     payload: TrackingNeedUpdate,
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    market_data_provider: MarketDataProvider = Depends(get_market_data_provider),
 ) -> TrackingNeedResponse:
     status = payload.status.strip().lower()
     if status not in TRACKING_NEED_STATUSES:
@@ -324,11 +326,26 @@ def update_tracking_need_status(
     tracking_need = db.scalar(
         select(AnalysisTrackingNeed)
         .where(AnalysisTrackingNeed.id == tracking_need_id)
-        .options(selectinload(AnalysisTrackingNeed.entity))
+        .options(
+            selectinload(AnalysisTrackingNeed.analysis),
+            selectinload(AnalysisTrackingNeed.entity),
+            selectinload(AnalysisTrackingNeed.primary_asset),
+            selectinload(AnalysisTrackingNeed.related_asset),
+        )
     )
     if tracking_need is None:
         raise HTTPException(status_code=404, detail="Tracking need not found.")
     tracking_need.status = status
+    if status in {"accepted", "tracked"}:
+        try:
+            _onboard_related_asset(
+                db=db,
+                tracking_need=tracking_need,
+                settings=settings,
+                market_data_provider=market_data_provider,
+            )
+        except MarketDataProviderError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
     db.commit()
     db.refresh(tracking_need)
     return _tracking_need_to_response(tracking_need)
@@ -553,6 +570,8 @@ def _tracking_need_to_response(need: AnalysisTrackingNeed) -> TrackingNeedRespon
         symbol=need.entity.symbol,
         canonical_name=need.entity.canonical_name,
         suggested_symbol=need.suggested_symbol,
+        related_asset_id=need.related_asset_id,
+        onboarding_status=_tracking_need_onboarding_status(need),
         tracking_type=need.tracking_type,
         reason=need.reason,
         evidence_snippets=need.evidence_snippets or [],
@@ -561,6 +580,46 @@ def _tracking_need_to_response(need: AnalysisTrackingNeed) -> TrackingNeedRespon
         provider=need.provider,
         model_name=need.model_name,
         model_version=need.model_version,
+    )
+
+
+def _tracking_need_onboarding_status(need: AnalysisTrackingNeed) -> str:
+    if need.related_asset_id is not None:
+        return "onboarded"
+    if need.suggested_symbol:
+        return "pending"
+    return "not_applicable"
+
+
+def _onboard_related_asset(
+    db: Session,
+    tracking_need: AnalysisTrackingNeed,
+    settings: Settings,
+    market_data_provider: MarketDataProvider,
+) -> None:
+    if not tracking_need.suggested_symbol:
+        return
+    symbol = tracking_need.suggested_symbol.upper().strip()
+    related_asset = db.scalar(select(Asset).where(Asset.symbol == symbol))
+    if related_asset is None:
+        related_asset = Asset(
+            symbol=symbol,
+            name=tracking_need.entity.name,
+            asset_type="equity",
+            currency=tracking_need.primary_asset.currency or "USD",
+        )
+        db.add(related_asset)
+        db.flush()
+    elif related_asset.name is None:
+        related_asset.name = tracking_need.entity.name
+    tracking_need.related_asset_id = related_asset.id
+    ensure_market_history(
+        db=db,
+        asset=related_asset,
+        ticker=symbol,
+        provider=market_data_provider,
+        analysis_as_of=tracking_need.analysis.analysis_as_of or utc_now(),
+        lookback_days=settings.market_lookback_days,
     )
 
 

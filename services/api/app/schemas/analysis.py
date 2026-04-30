@@ -57,6 +57,8 @@ class TrackingNeedResponse(BaseModel):
     symbol: str | None = None
     canonical_name: str
     suggested_symbol: str | None = None
+    related_asset_id: str | None = None
+    onboarding_status: str = "not_applicable"
     tracking_type: str
     reason: str
     evidence_snippets: list[str] = Field(default_factory=list)

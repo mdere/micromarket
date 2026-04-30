@@ -253,6 +253,7 @@ class AnalysisTrackingNeed(Base):
     analysis_id: Mapped[str] = mapped_column(ForeignKey("analyses.id"), index=True)
     primary_asset_id: Mapped[str] = mapped_column(ForeignKey("assets.id"), index=True)
     entity_id: Mapped[str] = mapped_column(ForeignKey("entities.id"), index=True)
+    related_asset_id: Mapped[str | None] = mapped_column(ForeignKey("assets.id"), index=True)
     suggested_symbol: Mapped[str | None] = mapped_column(String(32), index=True)
     tracking_type: Mapped[str] = mapped_column(String(64))
     reason: Mapped[str] = mapped_column(Text)
@@ -268,7 +269,8 @@ class AnalysisTrackingNeed(Base):
     )
 
     analysis: Mapped[Analysis] = relationship(back_populates="tracking_needs")
-    primary_asset: Mapped[Asset] = relationship()
+    primary_asset: Mapped[Asset] = relationship(foreign_keys=[primary_asset_id])
+    related_asset: Mapped[Asset | None] = relationship(foreign_keys=[related_asset_id])
     entity: Mapped[Entity] = relationship()
 
 
