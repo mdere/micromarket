@@ -218,9 +218,10 @@ The report generator writes this review surface to:
 ```text
 data/reports/sentiment_provider_comparison.csv
 data/reports/sentiment_provider_comparison.md
+data/reports/sentiment_provider_review.md
 ```
 
-The CSV is the working review artifact. Keep generated reports local unless a specific report becomes useful as documentation; `data/reports/**` is ignored by Git by default.
+The CSV is useful for spreadsheet-style review. The review Markdown is easier to read in VS Code because it creates one section per fixture with blank rubric fields. Keep generated reports local unless a specific report becomes useful as documentation; `data/reports/**` is ignored by Git by default.
 
 Initial decision thresholds before changing defaults:
 
@@ -391,8 +392,9 @@ Provider selection should happen in `app/sentiment/dependencies.py`.
 1. Add a sentiment provider comparison report generator. Done in `app/sentiment/comparison.py`.
 2. Write CSV and Markdown reports under `data/reports`. Done.
 3. Include blank human-review fields for snippet quality, driver quality, research-only check, review notes, and review action. Done.
-4. Use the report to expand fixtures to at least 20 examples before changing provider defaults.
-5. Promote repeated findings into provider tests and prompt/parser improvements.
+4. Generate a VS Code-friendly per-fixture review Markdown worksheet. Done.
+5. Use the report to expand fixtures to at least 20 examples before changing provider defaults.
+6. Promote repeated findings into provider tests and prompt/parser improvements.
 
 ## Guardrails
 

@@ -102,10 +102,48 @@ def test_write_reports_creates_csv_and_markdown(tmp_path) -> None:
         }
     ]
 
-    csv_path, markdown_path = write_reports(rows, tmp_path)
+    csv_path, markdown_path, review_path = write_reports(rows, tmp_path)
 
     assert csv_path.read_text(encoding="utf-8").startswith("id,ticker,title")
     markdown = markdown_path.read_text(encoding="utf-8")
     assert "# Sentiment Provider Comparison" in markdown
     assert "Baseline label matches: 1/1" in markdown
     assert "Ollama label matches: 0/1" in markdown
+    review = review_path.read_text(encoding="utf-8")
+    assert "# Sentiment Provider Qualitative Review" in review
+    assert "## example" in review
+    assert "- Snippet quality: " in review
+    assert "- Driver quality: " in review
+    assert "- Research-only: " in review
+    assert "- Review action: " in review
+
+
+def test_compare_fixtures_leaves_ollama_match_blank_when_ollama_not_run() -> None:
+    fixtures = [
+        {
+            "id": "example",
+            "ticker": "AMD",
+            "title": "AMD example",
+            "text": "AMD raised guidance.",
+            "expected_label": "positive",
+            "expected_drivers": ["guidance"],
+        }
+    ]
+    baseline = FakeProvider(
+        SentimentResult(
+            label="positive",
+            score=0.5,
+            confidence=0.7,
+            drivers=["guidance"],
+            evidence_snippets=["AMD raised guidance."],
+            limitations=[],
+            provider="baseline",
+            model_name="baseline",
+            model_version="test",
+        )
+    )
+
+    rows = compare_fixtures(fixtures, baseline_provider=baseline)
+
+    assert rows[0]["ollama_provider"] == ""
+    assert rows[0]["label_match_ollama"] == ""

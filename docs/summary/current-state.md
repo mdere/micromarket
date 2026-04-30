@@ -159,6 +159,7 @@ The product is research-only decision support. It should not issue direct buy/se
 - Sentiment provider comparison report generator is implemented:
   - `python -m app.sentiment.comparison --include-ollama` reads curated sentiment fixtures and writes CSV/Markdown review reports under `data/reports`.
   - Reports include baseline/Ollama labels, scores, confidence, drivers, snippets, runtime, fallback/error fields, and blank qualitative review columns.
+  - The generator also writes `sentiment_provider_review.md`, a VS Code-friendly per-fixture qualitative review worksheet.
 - Environment setup has been clarified:
   - The API reads process environment variables plus local `.env` files via `app/core/config.py`.
   - `services/api/.env.example` is the checked-in local API template; copy it to ignored `services/api/.env`.

@@ -43,13 +43,15 @@ def compare_fixtures(
     return rows
 
 
-def write_reports(rows: list[dict[str, Any]], output_dir: Path) -> tuple[Path, Path]:
+def write_reports(rows: list[dict[str, Any]], output_dir: Path) -> tuple[Path, Path, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / "sentiment_provider_comparison.csv"
     markdown_path = output_dir / "sentiment_provider_comparison.md"
+    review_path = output_dir / "sentiment_provider_review.md"
     _write_csv(rows, csv_path)
     _write_markdown(rows, markdown_path)
-    return csv_path, markdown_path
+    _write_review_markdown(rows, review_path)
+    return csv_path, markdown_path, review_path
 
 
 def build_ollama_provider(settings: Settings) -> OllamaSentimentProvider:
@@ -97,9 +99,10 @@ def main() -> None:
         baseline_provider=baseline_provider,
         ollama_provider=ollama_provider,
     )
-    csv_path, markdown_path = write_reports(rows, args.output_dir)
+    csv_path, markdown_path, review_path = write_reports(rows, args.output_dir)
     print(f"Wrote {csv_path}")
     print(f"Wrote {markdown_path}")
+    print(f"Wrote {review_path}")
 
 
 def _score_provider(provider: SentimentProvider | None, fixture: dict[str, Any]) -> ProviderOutcome:
@@ -152,7 +155,7 @@ def _build_row(
         "ollama_runtime_seconds": round(ollama.runtime_seconds, 3) if ollama else "",
         "ollama_error": ollama.error if ollama and ollama.error else "",
         "ollama_failed_or_fell_back": _ollama_failed_or_fell_back(ollama_result, ollama),
-        "label_match_ollama": ollama_result.label == expected_label if ollama_result else False,
+        "label_match_ollama": ollama_result.label == expected_label if ollama_result else "",
         "snippet_quality": "",
         "driver_quality": "",
         "research_only": "",
@@ -186,6 +189,7 @@ def _write_markdown(rows: list[dict[str, Any]], path: Path) -> None:
     label_matches = sum(1 for row in rows if row["label_match_baseline"])
     ollama_rows = [row for row in rows if row["ollama_provider"] or row["ollama_error"]]
     ollama_matches = sum(1 for row in ollama_rows if row["label_match_ollama"])
+    ollama_fallbacks = sum(1 for row in ollama_rows if row["ollama_failed_or_fell_back"] is True)
     lines = [
         "# Sentiment Provider Comparison",
         "",
@@ -194,6 +198,7 @@ def _write_markdown(rows: list[dict[str, Any]], path: Path) -> None:
     ]
     if ollama_rows:
         lines.append(f"Ollama label matches: {ollama_matches}/{len(ollama_rows)}")
+        lines.append(f"Ollama failures/fallbacks: {ollama_fallbacks}/{len(ollama_rows)}")
     lines.extend(
         [
             "",
@@ -207,6 +212,92 @@ def _write_markdown(rows: list[dict[str, Any]], path: Path) -> None:
             "{baseline_score} | {ollama_score} |  |".format(**row)
         )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _write_review_markdown(rows: list[dict[str, Any]], path: Path) -> None:
+    lines = [
+        "# Sentiment Provider Qualitative Review",
+        "",
+        "Use this worksheet to review provider quality in VS Code. Fill in the blank",
+        "rubric fields after reading the expected label, drivers, snippets, and limitations.",
+        "",
+        "Rubric values:",
+        "",
+        "- Snippet quality: `pass`, `partial`, or `fail`.",
+        "- Driver quality: `pass`, `partial`, or `fail`.",
+        "- Research-only: `pass` or `fail`.",
+        "- Review action: `fixture_ok`, `expand_fixture`, `tune_prompt`, `tune_parser`, `provider_bug`, or `no_action`.",
+        "",
+    ]
+    for row in rows:
+        lines.extend(_review_section(row))
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _review_section(row: dict[str, Any]) -> list[str]:
+    return [
+        f"## {row['id']}",
+        "",
+        f"Ticker: `{row['ticker']}`",
+        f"Title: {row['title']}",
+        "",
+        "Expected:",
+        "",
+        f"- Label: `{row['expected_label']}`",
+        f"- Score range: `{row['expected_score_min']}` to `{row['expected_score_max']}`",
+        f"- Drivers: {_format_json_list(row['expected_drivers'])}",
+        "",
+        "Baseline:",
+        "",
+        f"- Label: `{row['baseline_label']}`",
+        f"- Score: `{row['baseline_score']}`",
+        f"- Confidence: `{row['baseline_confidence']}`",
+        f"- Label match: `{row['label_match_baseline']}`",
+        f"- Drivers: {_format_json_list(row['baseline_drivers'])}",
+        f"- Evidence snippets: {_format_json_list(row['baseline_evidence_snippets'])}",
+        f"- Limitations: {_format_json_list(row['baseline_limitations'])}",
+        f"- Runtime seconds: `{row['baseline_runtime_seconds']}`",
+        "",
+        "Ollama:",
+        "",
+        f"- Provider: `{row['ollama_provider']}`",
+        f"- Label: `{row['ollama_label']}`",
+        f"- Score: `{row['ollama_score']}`",
+        f"- Confidence: `{row['ollama_confidence']}`",
+        f"- Label match: `{row['label_match_ollama']}`",
+        f"- Failed or fell back: `{row['ollama_failed_or_fell_back']}`",
+        f"- Error: `{row['ollama_error']}`",
+        f"- Drivers: {_format_json_list(row['ollama_drivers'])}",
+        f"- Evidence snippets: {_format_json_list(row['ollama_evidence_snippets'])}",
+        f"- Limitations: {_format_json_list(row['ollama_limitations'])}",
+        f"- Runtime seconds: `{row['ollama_runtime_seconds']}`",
+        "",
+        "Review:",
+        "",
+        "- Snippet quality: ",
+        "- Driver quality: ",
+        "- Research-only: ",
+        "- Review action: ",
+        "- Review notes: ",
+        "",
+    ]
+
+
+def _format_json_list(value: Any) -> str:
+    if not value:
+        return "`[]`"
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return f"`{value}`"
+    else:
+        parsed = value
+    if not parsed:
+        return "`[]`"
+    if not isinstance(parsed, list):
+        return f"`{parsed}`"
+    return "\n  - " + "\n  - ".join(str(item) for item in parsed)
 
 
 def _json(value: Any) -> str:

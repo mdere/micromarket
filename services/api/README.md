@@ -548,11 +548,12 @@ Outputs:
 
 - `../../data/reports/sentiment_provider_comparison.csv`
 - `../../data/reports/sentiment_provider_comparison.md`
+- `../../data/reports/sentiment_provider_review.md`
 
-The CSV includes blank review fields for `snippet_quality`, `driver_quality`,
-`research_only`, `review_notes`, and `review_action`. Fill those in while
-reviewing examples, then promote stable findings back into fixtures, provider
-tests, prompt changes, or parser changes.
+The CSV and review Markdown include blank review fields for `snippet_quality`,
+`driver_quality`, `research_only`, `review_notes`, and `review_action`. Use the
+review Markdown for VS Code-friendly row-by-row inspection, then promote stable
+findings back into fixtures, provider tests, prompt changes, or parser changes.
 
 ## URL Ingestion
 
