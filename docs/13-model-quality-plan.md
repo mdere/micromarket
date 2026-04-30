@@ -416,7 +416,9 @@ Single-fixture no-fallback runs on `mixed_earnings_beat_guidance_cut` reached Ol
 
 The next single-fixture no-fallback run produced the first valid native Ollama row after about 263.1 seconds. Ollama matched the expected `mixed` label with score `-0.33`, returned grounded snippets, stayed research-only, and covered `earnings`, `guidance`, `demand`, and `uncertainty`. It missed the expected `product` driver, so qualitative assessment is snippet quality `pass`, driver quality `partial`, research-only `pass`. Runtime remains much too slow for default API behavior on the current local CPU path. The parser now also strips extra wrapping quote characters from evidence snippets.
 
-Next review step: rerun the two mixed fixtures with `--ollama-no-fallback`, inspect native label quality, driver coverage, snippets, and runtime, then decide whether to try a larger batch or first reduce runtime with a smaller local model.
+The two-fixture no-fallback mixed rerun produced native Ollama rows for both fixtures with no fallbacks. Ollama matched 1/2 labels: it correctly labeled `mixed_earnings_beat_guidance_cut` as mixed, but mislabeled `mixed_partner_strength_customer_delay` as negative by underweighting positive backlog/upside evidence. Snippets were grounded and research-only. Driver quality remained partial: Ollama missed expected drivers such as `earnings`, `valuation`, and `product`, and added unsupported `valuation` and `analyst_action` drivers on the CRM fixture. Runtime was still too high for default behavior at about 174.5s-209.7s per fixture.
+
+Next review step: do not run the full 20-fixture comparison yet. First reduce runtime, likely by trying a smaller local model, and tighten mixed-evidence driver behavior. Then rerun the two mixed fixtures before expanding to a larger batch.
 
 ### Stage 4: Optional Hosted Research Environments
 
