@@ -195,7 +195,9 @@ The product is research-only decision support. It should not issue direct buy/se
   - The 5-fixture miss was `weak_evidence_short_note`: expected neutral, but Ollama labeled a simple product event positive with score `0.7`. Snippets remained grounded and research-only, but weak-evidence neutrality needs work.
   - Driver quality remains partial in the 5-fixture batch: Ollama omitted expected drivers, added unsupported/unnormalized drivers such as `operational update` and `backlog`, and sometimes used `guidance` without explicit guidance evidence.
   - The Ollama prompt now includes weak-evidence and driver-normalization guardrails: routine operations/product events without financial evidence should be neutral; product events are not positive unless tied to demand/revenue/adoption/margins/share/guidance; only normalized driver categories should be returned; backlog/order trends should map to `demand`.
-  - Next work should rerun the 5-fixture no-fallback `llama3.2:3b` batch after the prompt tune before attempting 10 or 20 fixtures. Keep baseline default.
+  - The post-tune 5-fixture no-fallback `llama3.2:3b` rerun produced native rows for all five fixtures with no fallbacks, 5/5 label matches, grounded snippets, research-only language, and runtimes of about 107.2s-116.8s per fixture.
+  - The weak-evidence miss was fixed: `weak_evidence_short_note` is now neutral with score `0.0`. Driver quality remains partial because neutral weak-evidence rows still include `product`, and other rows miss expected drivers such as `earnings` or `valuation`.
+  - This is a good pause point for Ollama work before pivoting to related-asset tracking. Keep `baseline` as default; keep `llama3.2:3b` as the practical local Ollama experiment model until GPU-backed Ollama is available.
 - Environment setup has been clarified:
   - The API reads process environment variables plus local `.env` files via `app/core/config.py`.
   - `services/api/.env.example` is the checked-in local API template; copy it to ignored `services/api/.env`.
@@ -364,7 +366,8 @@ The current work is implementing the first backend vertical slice:
 35. Smaller-model rerun with `llama3.2:3b` produced native no-fallback rows for both mixed fixtures: 2/2 label matches, grounded snippets, partial driver quality, and about 94.0s-101.1s runtime.
 36. 5-fixture no-fallback `llama3.2:3b` batch produced native rows with no fallbacks, 4/5 label matches, grounded snippets, partial driver quality, and about 78.7s-97.2s runtime.
 37. Prompt is tightened for weak-evidence neutrality and normalized driver categories after the 5-fixture miss.
-38. Next: rerun the 5-fixture no-fallback `llama3.2:3b` batch after the prompt tune, or implement `analysis_tracking_needs` if shifting from model-quality work back to product/data foundation.
+38. Post-tune 5-fixture no-fallback `llama3.2:3b` rerun produced native rows with no fallbacks, 5/5 label matches, grounded snippets, research-only language, and about 107.2s-116.8s runtime; driver quality remains partial.
+39. Next: pause Ollama work and implement `analysis_tracking_needs` for related-asset tracking, unless explicitly continuing model-quality evaluation.
 
 ## Suggested Recommendation To Explore Next
 
@@ -381,8 +384,8 @@ The current recommended architecture is:
 - Also store next-close and 7-trading-day forecasts for later evaluation.
 - Start market data with `yfinance` behind a provider interface.
 - Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
-- Continue model-quality work by rerunning the 5-fixture no-fallback `llama3.2:3b` comparison after weak-evidence and driver-normalization prompt tuning. Keep baseline default until fixture-level quality and runtime justify changing provider behavior.
-- If shifting back to product/data foundation, implement `analysis_tracking_needs` next so related assets/entities become first-class ticker-workspace suggestions before correlation work.
+- Pause Ollama work at the current checkpoint unless explicitly continuing model-quality evaluation. Keep `baseline` default and keep `llama3.2:3b` as the practical local Ollama experiment model.
+- Implement `analysis_tracking_needs` next so related assets/entities become first-class ticker-workspace suggestions before correlation work.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -410,7 +413,7 @@ When resuming:
 13. Read `docs/13-model-quality-plan.md`.
 14. Read `docs/14-ticker-context-ingestion-plan.md`.
 15. Expand curated sentiment fixtures as new failure cases appear.
-16. Rerun the 5-fixture no-fallback `llama3.2:3b` comparison after the weak-evidence prompt tune before expanding to 10 or 20 fixtures.
-17. Or, if prioritizing ticker-association product work, implement `analysis_tracking_needs` and expose related-asset suggestions in API responses.
+16. Implement `analysis_tracking_needs` and expose related-asset suggestions in API responses.
+17. Later, resume model-quality evaluation by running a 10-fixture or full-fixture `llama3.2:3b` comparison, preferably after GPU-backed Ollama is available.
 18. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
 19. Keep the UI and model outputs research-only and avoid buy/sell/hold language.

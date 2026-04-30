@@ -428,7 +428,9 @@ A 5-fixture no-fallback `llama3.2:3b` batch produced native rows for all five fi
 
 The prompt is now tightened for weak-evidence neutrality and driver normalization: routine operations and product events without financial evidence should be neutral; product events are not positive unless connected to demand, revenue, adoption, margins, market share, or guidance; drivers must come from the normalized category set; backlog and order trends should map to `demand`.
 
-Next review step: rerun the 5-fixture no-fallback `llama3.2:3b` batch after the prompt tune. If weak-evidence neutrality and driver normalization improve while labels/snippets remain good, then try a 10-fixture batch or wait for GPU-backed Ollama before broader evaluation.
+The post-tune 5-fixture no-fallback `llama3.2:3b` rerun produced native rows for all five fixtures with no fallbacks, 5/5 label matches, grounded snippets, research-only language, and runtimes of about 107.2s-116.8s per fixture. The weak-evidence miss was fixed: `weak_evidence_short_note` is now neutral with score `0.0`. Driver quality remains partial because neutral weak-evidence rows still include `product`, and other rows miss expected drivers such as `earnings` or `valuation`.
+
+Pause point: keep `baseline` as the default provider and treat `llama3.2:3b` as the practical local Ollama experiment model until GPU-backed Ollama is available. If model-quality work resumes, the next comparison should be a 10-fixture or full-fixture `llama3.2:3b` run. The next product/data foundation slice is `analysis_tracking_needs`.
 
 ### Stage 4: Optional Hosted Research Environments
 
