@@ -9,6 +9,7 @@ import { EvaluationMonitor } from "@/components/dashboard/evaluation-monitor";
 import { EvidencePanel } from "@/components/dashboard/evidence-panel";
 import { ForecastPanel } from "@/components/dashboard/forecast-panel";
 import { Metric } from "@/components/dashboard/metric";
+import { RelatedSignalsPanel } from "@/components/dashboard/related-signals-panel";
 import { SentimentMarketGrid } from "@/components/dashboard/sentiment-market-grid";
 import { TimelinePanel } from "@/components/dashboard/timeline-panel";
 import { formatPrice, normalizeTicker } from "@/lib/format";
@@ -316,6 +317,11 @@ export default function Home() {
           <ForecastPanel forecast={primaryForecast} />
 
           <SentimentMarketGrid analysis={activeAnalysis} />
+
+          <RelatedSignalsPanel
+            onTickerSelect={(ticker) => void loadTickerWorkspace(ticker)}
+            trackingNeeds={activeAnalysis?.tracking_needs ?? []}
+          />
 
           <EvaluationMonitor
             error={evaluationError}

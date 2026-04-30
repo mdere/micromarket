@@ -9,6 +9,7 @@ from app.core.config import Settings, get_settings
 from app.db.models import (
     Analysis,
     AnalysisArticle,
+    AnalysisTrackingNeed,
     Article,
     ArticleEntity,
     Asset,
@@ -27,6 +28,7 @@ from app.ingestion.dependencies import get_url_extraction_provider
 from app.ingestion.entities import DeterministicEntityExtractor, ExtractedEntity
 from app.ingestion.evidence import ArticleEvidencePolicy
 from app.ingestion.service import ArticleIngestionService, NormalizedArticle
+from app.ingestion.tracking import TrackingNeed, TrackingNeedGenerator
 from app.ingestion.url_provider import URLExtractionError, URLExtractionProvider
 from app.market_data.dependencies import get_market_data_provider
 from app.market_data.history import ensure_market_history
@@ -145,6 +147,7 @@ def create_analysis(
     artifacts = ArtifactStore(settings.artifact_root)
     evidence_policy = ArticleEvidencePolicy()
     entity_extractor = DeterministicEntityExtractor()
+    tracking_need_generator = TrackingNeedGenerator()
     seen_hashes: set[str] = set()
     included_sentiment_labels: list[str] = []
     included_sentiment_scores: list[Decimal] = []
@@ -188,8 +191,10 @@ def create_analysis(
         _persist_article_entities(
             db=db,
             asset=asset,
+            analysis=analysis,
             article=article,
             extracted_entities=extracted_entities,
+            tracking_need_generator=tracking_need_generator,
         )
 
         evidence_decision = evidence_policy.decide(normalized, ticker, seen_hashes)
@@ -308,6 +313,7 @@ def list_analyses(
         select(Analysis)
         .options(selectinload(Analysis.asset), selectinload(Analysis.articles))
         .options(selectinload(Analysis.asset).selectinload(Asset.asset_relationships))
+        .options(selectinload(Analysis.tracking_needs).selectinload(AnalysisTrackingNeed.entity))
         .options(
             selectinload(Analysis.articles)
             .selectinload(Article.article_entities)
@@ -336,6 +342,7 @@ def _get_analysis(db: Session, analysis_id: str) -> Analysis:
         .where(Analysis.id == analysis_id)
         .options(
             selectinload(Analysis.asset).selectinload(Asset.asset_relationships),
+            selectinload(Analysis.tracking_needs).selectinload(AnalysisTrackingNeed.entity),
             selectinload(Analysis.articles)
             .selectinload(Article.article_entities)
             .selectinload(ArticleEntity.entity),
@@ -490,6 +497,30 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
             }
             for run in sorted(analysis.forecast_runs, key=lambda item: item.horizon)
         ],
+        tracking_needs=[
+            {
+                "id": need.id,
+                "entity_id": need.entity_id,
+                "entity_type": need.entity.entity_type,
+                "name": need.entity.name,
+                "symbol": need.entity.symbol,
+                "canonical_name": need.entity.canonical_name,
+                "suggested_symbol": need.suggested_symbol,
+                "tracking_type": need.tracking_type,
+                "reason": need.reason,
+                "evidence_snippets": need.evidence_snippets or [],
+                "priority_score": _decimal_to_str(need.priority_score) or "0",
+                "status": need.status,
+                "provider": need.provider,
+                "model_name": need.model_name,
+                "model_version": need.model_version,
+            }
+            for need in sorted(
+                analysis.tracking_needs,
+                key=lambda item: (item.priority_score, item.created_at),
+                reverse=True,
+            )
+        ],
     )
 
 
@@ -555,8 +586,10 @@ def _resolve_analysis_as_of(
 def _persist_article_entities(
     db: Session,
     asset: Asset,
+    analysis: Analysis,
     article: Article,
     extracted_entities: list[ExtractedEntity],
+    tracking_need_generator: TrackingNeedGenerator,
 ) -> None:
     for extracted in extracted_entities:
         entity = _get_or_create_entity(db, extracted)
@@ -601,6 +634,65 @@ def _persist_article_entities(
                 relationship.confidence_score,
                 Decimal(str(extracted.confidence)),
             )
+        tracking_need = tracking_need_generator.generate(extracted)
+        _persist_tracking_need(
+            db=db,
+            analysis=analysis,
+            asset=asset,
+            entity=entity,
+            tracking_need=tracking_need,
+        )
+
+
+def _persist_tracking_need(
+    db: Session,
+    analysis: Analysis,
+    asset: Asset,
+    entity: Entity,
+    tracking_need: TrackingNeed,
+) -> None:
+    existing = db.scalar(
+        select(AnalysisTrackingNeed)
+        .where(AnalysisTrackingNeed.analysis_id == analysis.id)
+        .where(AnalysisTrackingNeed.entity_id == entity.id)
+        .where(AnalysisTrackingNeed.tracking_type == tracking_need.tracking_type)
+    )
+    if existing is None:
+        db.add(
+            AnalysisTrackingNeed(
+                analysis_id=analysis.id,
+                primary_asset_id=asset.id,
+                entity_id=entity.id,
+                suggested_symbol=tracking_need.suggested_symbol,
+                tracking_type=tracking_need.tracking_type,
+                reason=tracking_need.reason,
+                evidence_snippets=tracking_need.evidence_snippets,
+                priority_score=Decimal(str(tracking_need.priority_score)),
+                status=tracking_need.status,
+                provider=tracking_need.provider,
+                model_name=tracking_need.model_name,
+                model_version=tracking_need.model_version,
+            )
+        )
+        return
+    existing.priority_score = max(
+        existing.priority_score,
+        Decimal(str(tracking_need.priority_score)),
+    )
+    existing.evidence_snippets = _merge_snippets(
+        existing.evidence_snippets,
+        tracking_need.evidence_snippets,
+    )
+    if existing.suggested_symbol is None and tracking_need.suggested_symbol is not None:
+        existing.suggested_symbol = tracking_need.suggested_symbol
+
+
+def _merge_snippets(existing: list[str], incoming: list[str]) -> list[str]:
+    snippets = []
+    for snippet in [*(existing or []), *incoming]:
+        if snippet and snippet not in snippets:
+            snippets.append(snippet)
+    return snippets[:5]
 
 
 def _get_or_create_entity(db: Session, extracted: ExtractedEntity) -> Entity:

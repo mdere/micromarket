@@ -143,6 +143,7 @@ class Analysis(Base):
         back_populates="analysis", uselist=False
     )
     forecast_runs: Mapped[list["ForecastRun"]] = relationship(back_populates="analysis")
+    tracking_needs: Mapped[list["AnalysisTrackingNeed"]] = relationship(back_populates="analysis")
 
 
 class Article(Base):
@@ -242,6 +243,33 @@ class AssetRelationship(Base):
 
     asset: Mapped[Asset] = relationship(back_populates="asset_relationships")
     entity: Mapped[Entity] = relationship(back_populates="asset_relationships")
+
+
+class AnalysisTrackingNeed(Base):
+    __tablename__ = "analysis_tracking_needs"
+    __table_args__ = (UniqueConstraint("analysis_id", "entity_id", "tracking_type"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    analysis_id: Mapped[str] = mapped_column(ForeignKey("analyses.id"), index=True)
+    primary_asset_id: Mapped[str] = mapped_column(ForeignKey("assets.id"), index=True)
+    entity_id: Mapped[str] = mapped_column(ForeignKey("entities.id"), index=True)
+    suggested_symbol: Mapped[str | None] = mapped_column(String(32), index=True)
+    tracking_type: Mapped[str] = mapped_column(String(64))
+    reason: Mapped[str] = mapped_column(Text)
+    evidence_snippets: Mapped[list[str]] = mapped_column(JSON, default=list)
+    priority_score: Mapped[Decimal] = mapped_column(Numeric(6, 5))
+    status: Mapped[str] = mapped_column(String(32), default="suggested")
+    provider: Mapped[str] = mapped_column(String(64))
+    model_name: Mapped[str] = mapped_column(String(128))
+    model_version: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    analysis: Mapped[Analysis] = relationship(back_populates="tracking_needs")
+    primary_asset: Mapped[Asset] = relationship()
+    entity: Mapped[Entity] = relationship()
 
 
 class SentimentRun(Base):

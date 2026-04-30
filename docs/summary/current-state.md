@@ -145,8 +145,11 @@ The product is research-only decision support. It should not issue direct buy/se
   - `docs/14-ticker-context-ingestion-plan.md` now defines the next tracking-needs direction.
   - Goal: each ticker workspace should show related assets, companies, products, customers, suppliers, competitors, and themes that may affect the primary ticker.
   - Related tickers such as `TSM`, `MSFT`, `AMZN`, or `NVDA` should become navigable workspaces where their own articles, sentiment, and market history can be gathered.
-  - Next backend slice should add `analysis_tracking_needs`, generated from extracted entities and asset relationships.
-  - Next UI slice should show a `Related Signals` or `Tracking Needs` panel in the ticker workspace.
+  - `analysis_tracking_needs` is implemented with Alembic revision `20260430_0006`.
+  - `TrackingNeedGenerator` creates deterministic suggestions from extracted article entities and asset relationships.
+  - Analysis responses now include related tracking needs with suggested symbol, tracking type, reason, evidence snippets, priority, status, and provider/model lineage.
+  - The web ticker workspace now shows a `Related Signals` panel, and ticker-backed suggestions are clickable to load that ticker workspace.
+  - Next backend follow-up should add status-changing endpoints so tracking needs can be accepted, ignored, or marked tracked.
   - Correlation/proportional-impact analysis should wait until related assets have their own sentiment and market-history observations.
 - Curated sentiment fixture slice is implemented:
   - `services/api/tests/fixtures/sentiment_curated_examples.json` contains 20 deterministic examples across positive, negative, neutral, mixed, weak-evidence, negation, analyst-action, regulatory/product, supply-chain, related-entity, uncertainty, guidance-cut, and irrelevant-ticker cases.
@@ -367,7 +370,8 @@ The current work is implementing the first backend vertical slice:
 36. 5-fixture no-fallback `llama3.2:3b` batch produced native rows with no fallbacks, 4/5 label matches, grounded snippets, partial driver quality, and about 78.7s-97.2s runtime.
 37. Prompt is tightened for weak-evidence neutrality and normalized driver categories after the 5-fixture miss.
 38. Post-tune 5-fixture no-fallback `llama3.2:3b` rerun produced native rows with no fallbacks, 5/5 label matches, grounded snippets, research-only language, and about 107.2s-116.8s runtime; driver quality remains partial.
-39. Next: pause Ollama work and implement `analysis_tracking_needs` for related-asset tracking, unless explicitly continuing model-quality evaluation.
+39. `analysis_tracking_needs` is implemented and surfaced in the API plus web `Related Signals` panel.
+40. Next: add tracking-need status actions and related-ticker onboarding from accepted suggestions.
 
 ## Suggested Recommendation To Explore Next
 
@@ -385,7 +389,7 @@ The current recommended architecture is:
 - Start market data with `yfinance` behind a provider interface.
 - Ticker-centered history is now the active UI shape: one ticker workspace lists analyses and articles for that ticker before watchlists or batch workflows are introduced.
 - Pause Ollama work at the current checkpoint unless explicitly continuing model-quality evaluation. Keep `baseline` default and keep `llama3.2:3b` as the practical local Ollama experiment model.
-- Implement `analysis_tracking_needs` next so related assets/entities become first-class ticker-workspace suggestions before correlation work.
+- Continue related-asset tracking by adding tracking-need status actions and related-ticker onboarding from accepted suggestions.
 
 Reason: the project's highest-risk work is data/model quality, not API throughput. Python will reduce friction for ingestion, NLP, model evaluation, notebooks, and experimentation. Go can still be introduced later behind stable service boundaries if needed.
 
@@ -413,7 +417,8 @@ When resuming:
 13. Read `docs/13-model-quality-plan.md`.
 14. Read `docs/14-ticker-context-ingestion-plan.md`.
 15. Expand curated sentiment fixtures as new failure cases appear.
-16. Implement `analysis_tracking_needs` and expose related-asset suggestions in API responses.
-17. Later, resume model-quality evaluation by running a 10-fixture or full-fixture `llama3.2:3b` comparison, preferably after GPU-backed Ollama is available.
-18. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
-19. Keep the UI and model outputs research-only and avoid buy/sell/hold language.
+16. Continue related-asset tracking with status actions for tracking needs.
+17. Add related-ticker onboarding from accepted tracking needs.
+18. Later, resume model-quality evaluation by running a 10-fixture or full-fixture `llama3.2:3b` comparison, preferably after GPU-backed Ollama is available.
+19. Keep Ollama, Colab, and Databricks work behind provider/research boundaries.
+20. Keep the UI and model outputs research-only and avoid buy/sell/hold language.

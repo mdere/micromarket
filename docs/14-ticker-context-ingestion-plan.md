@@ -309,6 +309,22 @@ Implement `analysis_tracking_needs` and surface it in the API before expanding t
 
 Reason: the backend already captures raw related entities and relationships, but the user-facing workflow needs a stable, prioritized object that says "track this because this article connected it to the primary ticker." Once that object exists, the web app can render it cleanly and later use it for related-ticker navigation.
 
+Implementation status:
+
+- `analysis_tracking_needs` is implemented with Alembic revision `20260430_0006`.
+- `TrackingNeedGenerator` creates deterministic suggestions from extracted article entities and asset relationships.
+- Analysis responses include tracking needs with suggested symbol, tracking type, reason, evidence snippets, priority, status, and provider/model lineage.
+- The web ticker workspace includes a `Related Signals` panel.
+- Related ticker suggestions with symbols are clickable and load that ticker workspace.
+
+Next follow-up:
+
+1. Add status-changing endpoints so suggestions can be accepted, ignored, or marked tracked.
+2. Add related ticker onboarding from accepted tracking needs.
+3. Expand the deterministic entity dictionary with more ticker aliases and relationship seeds.
+4. Add tests for repeated mentions raising or preserving priority across analyses.
+5. Add later descriptive related-asset movement/sentiment comparison once enough related workspaces have observations.
+
 ## Guardrails
 
 - Do not use future market data for historical features.

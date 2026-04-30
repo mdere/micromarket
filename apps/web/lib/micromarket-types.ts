@@ -1,3 +1,17 @@
+export type ArticleEntityResponse = {
+  id: string;
+  entity_type: string;
+  name: string;
+  symbol: string | null;
+  canonical_name: string;
+  relationship_type: string;
+  confidence_score: string;
+  evidence_snippets: string[];
+  provider: string;
+  model_name: string;
+  model_version: string;
+};
+
 export type ArticleResponse = {
   id: string;
   title: string | null;
@@ -11,6 +25,25 @@ export type ArticleResponse = {
   duplicate_group_id: string | null;
   included_in_forecast: boolean;
   exclusion_reason: string | null;
+  entities: ArticleEntityResponse[];
+};
+
+export type TrackingNeedResponse = {
+  id: string;
+  entity_id: string;
+  entity_type: string;
+  name: string;
+  symbol: string | null;
+  canonical_name: string;
+  suggested_symbol: string | null;
+  tracking_type: string;
+  reason: string;
+  evidence_snippets: string[];
+  priority_score: string;
+  status: string;
+  provider: string;
+  model_name: string;
+  model_version: string;
 };
 
 export type MarketQuoteResponse = {
@@ -67,6 +100,7 @@ export type AnalysisResponse = {
   market_quote: MarketQuoteResponse | null;
   sentiment_aggregate: SentimentAggregateResponse | null;
   forecast_runs: ForecastRunResponse[];
+  tracking_needs: TrackingNeedResponse[];
 };
 
 export type EvaluationHorizonSummary = {

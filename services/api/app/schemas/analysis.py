@@ -49,6 +49,24 @@ class ArticleResponse(BaseModel):
     entities: list[ArticleEntityResponse] = Field(default_factory=list)
 
 
+class TrackingNeedResponse(BaseModel):
+    id: str
+    entity_id: str
+    entity_type: str
+    name: str
+    symbol: str | None = None
+    canonical_name: str
+    suggested_symbol: str | None = None
+    tracking_type: str
+    reason: str
+    evidence_snippets: list[str] = Field(default_factory=list)
+    priority_score: str
+    status: str
+    provider: str
+    model_name: str
+    model_version: str
+
+
 class MarketQuoteResponse(BaseModel):
     id: str
     provider: str
@@ -138,3 +156,4 @@ class AnalysisResponse(BaseModel):
     sentiment_runs: list[SentimentRunResponse] = Field(default_factory=list)
     sentiment_aggregate: SentimentAggregateResponse | None = None
     forecast_runs: list[ForecastRunResponse] = Field(default_factory=list)
+    tracking_needs: list[TrackingNeedResponse] = Field(default_factory=list)

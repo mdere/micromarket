@@ -382,7 +382,8 @@ button:disabled {
 }
 
 .factor-list,
-.evidence-list {
+.evidence-list,
+.related-signal-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -485,6 +486,50 @@ button:disabled {
 
 .evidence-meta span.reused {
   color: var(--focus);
+}
+
+.related-signal-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.related-signal-main {
+  align-items: flex-start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.related-signal-main strong {
+  display: block;
+  font-size: 13px;
+}
+
+.related-signal-main p,
+.related-signal-evidence {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 3px 0 0;
+}
+
+.related-signal-symbol {
+  background: var(--surface-blue);
+  border: 1px solid #b9cbd7;
+  border-radius: 6px;
+  color: var(--focus);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 750;
+  min-width: 58px;
+  padding: 7px 9px;
+}
+
+.related-signal-symbol:hover {
+  background: #e2eef5;
 }
 
 .warning-text {

@@ -302,6 +302,21 @@ def test_create_analysis_extracts_related_entities(tmp_path) -> None:
         assert tsmc["provider"] == "deterministic"
         assert tsmc["model_name"] == "entity-alias-baseline"
         assert any("TSMC expanded foundry capacity" in snippet for snippet in tsmc["evidence_snippets"])
+        tracking_needs = created["tracking_needs"]
+        tracking_by_name = {need["name"]: need for need in tracking_needs}
+        assert tracking_by_name["TSMC"]["suggested_symbol"] == "TSM"
+        assert tracking_by_name["TSMC"]["tracking_type"] == "supplier"
+        assert tracking_by_name["TSMC"]["status"] == "suggested"
+        assert "supplier connected" in tracking_by_name["TSMC"]["reason"]
+        assert any(
+            "TSMC expanded foundry capacity" in snippet
+            for snippet in tracking_by_name["TSMC"]["evidence_snippets"]
+        )
+        assert tracking_by_name["Samsung"]["tracking_type"] == "supplier"
+        assert tracking_by_name["HBM"]["tracking_type"] == "product_theme"
+        assert tracking_by_name["HBM"]["suggested_symbol"] is None
+        assert tracking_by_name["TSMC"]["provider"] == "deterministic"
+        assert tracking_by_name["TSMC"]["model_name"] == "tracking-needs-baseline"
     finally:
         app.dependency_overrides.clear()
 
