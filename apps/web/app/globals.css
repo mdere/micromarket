@@ -532,6 +532,28 @@ button:disabled {
   background: #e2eef5;
 }
 
+.related-signal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.related-signal-actions button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.related-signal-actions button:disabled {
+  background: #eef1f2;
+  color: var(--muted);
+  cursor: default;
+}
+
 .warning-text {
   color: var(--warning);
   font-size: 12px;

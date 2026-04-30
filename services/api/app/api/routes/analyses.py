@@ -34,12 +34,20 @@ from app.market_data.dependencies import get_market_data_provider
 from app.market_data.history import ensure_market_history
 from app.market_data.provider import MarketDataProvider
 from app.market_data.yfinance_provider import MarketDataProviderError
-from app.schemas.analysis import AnalysisCreate, AnalysisResponse, ArticleInput
+from app.schemas.analysis import (
+    AnalysisCreate,
+    AnalysisResponse,
+    ArticleInput,
+    TrackingNeedResponse,
+    TrackingNeedUpdate,
+)
 from app.sentiment.dependencies import get_sentiment_provider
 from app.sentiment.provider import SentimentProvider, SentimentProviderError
 from app.storage import ArtifactStore
 
 router = APIRouter()
+
+TRACKING_NEED_STATUSES = {"suggested", "accepted", "ignored", "tracked"}
 
 
 @router.post("", response_model=AnalysisResponse, status_code=201)
@@ -298,6 +306,34 @@ def create_analysis(
     return _to_response(persisted, "Analysis created with persisted article evidence.")
 
 
+@router.patch("/tracking-needs/{tracking_need_id}", response_model=TrackingNeedResponse)
+def update_tracking_need_status(
+    tracking_need_id: str,
+    payload: TrackingNeedUpdate,
+    db: Session = Depends(get_db),
+) -> TrackingNeedResponse:
+    status = payload.status.strip().lower()
+    if status not in TRACKING_NEED_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Tracking need status must be one of: "
+                f"{', '.join(sorted(TRACKING_NEED_STATUSES))}."
+            ),
+        )
+    tracking_need = db.scalar(
+        select(AnalysisTrackingNeed)
+        .where(AnalysisTrackingNeed.id == tracking_need_id)
+        .options(selectinload(AnalysisTrackingNeed.entity))
+    )
+    if tracking_need is None:
+        raise HTTPException(status_code=404, detail="Tracking need not found.")
+    tracking_need.status = status
+    db.commit()
+    db.refresh(tracking_need)
+    return _tracking_need_to_response(tracking_need)
+
+
 @router.get("/{analysis_id}", response_model=AnalysisResponse)
 def get_analysis(analysis_id: str, db: Session = Depends(get_db)) -> AnalysisResponse:
     analysis = _get_analysis(db, analysis_id)
@@ -498,29 +534,33 @@ def _to_response(analysis: Analysis, message: str) -> AnalysisResponse:
             for run in sorted(analysis.forecast_runs, key=lambda item: item.horizon)
         ],
         tracking_needs=[
-            {
-                "id": need.id,
-                "entity_id": need.entity_id,
-                "entity_type": need.entity.entity_type,
-                "name": need.entity.name,
-                "symbol": need.entity.symbol,
-                "canonical_name": need.entity.canonical_name,
-                "suggested_symbol": need.suggested_symbol,
-                "tracking_type": need.tracking_type,
-                "reason": need.reason,
-                "evidence_snippets": need.evidence_snippets or [],
-                "priority_score": _decimal_to_str(need.priority_score) or "0",
-                "status": need.status,
-                "provider": need.provider,
-                "model_name": need.model_name,
-                "model_version": need.model_version,
-            }
+            _tracking_need_to_response(need)
             for need in sorted(
                 analysis.tracking_needs,
                 key=lambda item: (item.priority_score, item.created_at),
                 reverse=True,
             )
         ],
+    )
+
+
+def _tracking_need_to_response(need: AnalysisTrackingNeed) -> TrackingNeedResponse:
+    return TrackingNeedResponse(
+        id=need.id,
+        entity_id=need.entity_id,
+        entity_type=need.entity.entity_type,
+        name=need.entity.name,
+        symbol=need.entity.symbol,
+        canonical_name=need.entity.canonical_name,
+        suggested_symbol=need.suggested_symbol,
+        tracking_type=need.tracking_type,
+        reason=need.reason,
+        evidence_snippets=need.evidence_snippets or [],
+        priority_score=_decimal_to_str(need.priority_score) or "0",
+        status=need.status,
+        provider=need.provider,
+        model_name=need.model_name,
+        model_version=need.model_version,
     )
 
 

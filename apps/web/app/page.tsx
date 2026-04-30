@@ -17,7 +17,8 @@ import type {
   AnalysisResponse,
   ArticleHistoryItem,
   EvaluationRefreshResponse,
-  EvaluationSummaryResponse
+  EvaluationSummaryResponse,
+  TrackingNeedResponse
 } from "@/lib/micromarket-types";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -264,6 +265,36 @@ export default function Home() {
     }
   }
 
+  async function updateTrackingNeedStatus(trackingNeedId: string, status: string) {
+    setWorkspaceError(null);
+    setStatusMessage(`Marking signal ${status}`);
+    try {
+      const response = await fetch(`${apiBaseUrl}/analyses/tracking-needs/${trackingNeedId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      const updated = (await response.json()) as TrackingNeedResponse | { detail?: string };
+      if (!response.ok) {
+        setWorkspaceError(
+          "detail" in updated && updated.detail
+            ? updated.detail
+            : `Signal update failed (${response.status}).`
+        );
+        return;
+      }
+      setActiveAnalysis((current) =>
+        current ? replaceTrackingNeed(current, updated as TrackingNeedResponse) : current
+      );
+      setTickerAnalyses((analyses) =>
+        analyses.map((analysis) => replaceTrackingNeed(analysis, updated as TrackingNeedResponse))
+      );
+      setStatusMessage(`Signal marked ${status}`);
+    } catch {
+      setWorkspaceError("API not reachable while updating related signal.");
+    }
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -319,6 +350,9 @@ export default function Home() {
           <SentimentMarketGrid analysis={activeAnalysis} />
 
           <RelatedSignalsPanel
+            onStatusChange={(trackingNeedId, status) =>
+              void updateTrackingNeedStatus(trackingNeedId, status)
+            }
             onTickerSelect={(ticker) => void loadTickerWorkspace(ticker)}
             trackingNeeds={activeAnalysis?.tracking_needs ?? []}
           />
@@ -354,4 +388,14 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+function replaceTrackingNeed(
+  analysis: AnalysisResponse,
+  updated: TrackingNeedResponse
+): AnalysisResponse {
+  const trackingNeeds = analysis.tracking_needs.map((need) =>
+    need.id === updated.id ? updated : need
+  );
+  return { ...analysis, tracking_needs: trackingNeeds };
 }

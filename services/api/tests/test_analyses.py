@@ -321,6 +321,74 @@ def test_create_analysis_extracts_related_entities(tmp_path) -> None:
         app.dependency_overrides.clear()
 
 
+def test_update_tracking_need_status(tmp_path) -> None:
+    client = build_test_app(tmp_path)
+
+    try:
+        response = client.post(
+            "/analyses",
+            json={
+                "ticker": "NVDA",
+                "articles": [
+                    {
+                        "title": "NVDA supplier note",
+                        "source": "manual note",
+                        "text": "NVDA demand stayed strong as TSMC expanded foundry capacity.",
+                    }
+                ],
+            },
+        )
+        assert response.status_code == 201
+        tracking_need = next(
+            need for need in response.json()["tracking_needs"] if need["name"] == "TSMC"
+        )
+
+        updated = client.patch(
+            f"/analyses/tracking-needs/{tracking_need['id']}",
+            json={"status": "accepted"},
+        )
+
+        assert updated.status_code == 200
+        assert updated.json()["id"] == tracking_need["id"]
+        assert updated.json()["status"] == "accepted"
+        fetched = client.get(f"/analyses/{response.json()['id']}")
+        fetched_needs = {need["id"]: need for need in fetched.json()["tracking_needs"]}
+        assert fetched_needs[tracking_need["id"]]["status"] == "accepted"
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_update_tracking_need_status_rejects_invalid_status(tmp_path) -> None:
+    client = build_test_app(tmp_path)
+
+    try:
+        response = client.post(
+            "/analyses",
+            json={
+                "ticker": "NVDA",
+                "articles": [
+                    {
+                        "title": "NVDA supplier note",
+                        "source": "manual note",
+                        "text": "NVDA demand stayed strong as TSMC expanded foundry capacity.",
+                    }
+                ],
+            },
+        )
+        assert response.status_code == 201
+        tracking_need = response.json()["tracking_needs"][0]
+
+        updated = client.patch(
+            f"/analyses/tracking-needs/{tracking_need['id']}",
+            json={"status": "promoted"},
+        )
+
+        assert updated.status_code == 400
+        assert "accepted" in updated.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_create_analysis_excludes_duplicate_article_from_aggregate(tmp_path) -> None:
     client = build_test_app(tmp_path)
 

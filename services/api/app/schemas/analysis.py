@@ -67,6 +67,10 @@ class TrackingNeedResponse(BaseModel):
     model_version: str
 
 
+class TrackingNeedUpdate(BaseModel):
+    status: str
+
+
 class MarketQuoteResponse(BaseModel):
     id: str
     provider: str

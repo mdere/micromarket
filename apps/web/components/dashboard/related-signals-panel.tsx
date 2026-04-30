@@ -1,9 +1,11 @@
 import type { TrackingNeedResponse } from "@/lib/micromarket-types";
 
 export function RelatedSignalsPanel({
+  onStatusChange,
   onTickerSelect,
   trackingNeeds
 }: {
+  onStatusChange: (trackingNeedId: string, status: string) => void;
   onTickerSelect: (ticker: string) => void;
   trackingNeeds: TrackingNeedResponse[];
 }) {
@@ -42,6 +44,29 @@ export function RelatedSignalsPanel({
                   <span>{need.tracking_type.replace(/_/g, " ")}</span>
                   <span>priority {need.priority_score}</span>
                   <span>{need.status}</span>
+                </div>
+                <div className="related-signal-actions" aria-label={`Actions for ${need.name}`}>
+                  <button
+                    disabled={need.status === "accepted"}
+                    type="button"
+                    onClick={() => onStatusChange(need.id, "accepted")}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    disabled={need.status === "tracked"}
+                    type="button"
+                    onClick={() => onStatusChange(need.id, "tracked")}
+                  >
+                    Tracked
+                  </button>
+                  <button
+                    disabled={need.status === "ignored"}
+                    type="button"
+                    onClick={() => onStatusChange(need.id, "ignored")}
+                  >
+                    Ignore
+                  </button>
                 </div>
                 {need.evidence_snippets[0] ? (
                   <p className="related-signal-evidence">{need.evidence_snippets[0]}</p>
