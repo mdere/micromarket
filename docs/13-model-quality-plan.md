@@ -422,7 +422,9 @@ The prompt is now tightened for this failure mode: material positive and negativ
 
 A post-tune two-fixture no-fallback rerun with `--ollama-timeout-seconds 120` timed out on both fixtures, so it did not produce native rows for quality assessment. This confirms CPU runtime is still the immediate blocker at shorter timeouts.
 
-Next review step: do not run the full 20-fixture comparison yet. First reduce runtime with a smaller local model or GPU-backed Ollama path. For CPU diagnostics only, keep `--ollama-timeout-seconds 300` when rerunning targeted mixed fixtures, then expand only if quality and runtime are acceptable.
+A smaller-model rerun with `--ollama-model llama3.2:3b --ollama-timeout-seconds 120` produced native rows for both mixed fixtures with no fallbacks. Ollama matched 2/2 labels, returned grounded snippets, and stayed research-only. Runtime improved enough to complete under 120 seconds, but remains slow at about 94.0s-101.1s per fixture. Driver quality is still partial: `backlog` appeared as an unnormalized driver, and expected `earnings`, `supply`, `valuation`, `product`, and `uncertainty` were missing across the two rows.
+
+Next review step: do not run the full 20-fixture comparison yet. Run a small 5-fixture no-fallback batch with `llama3.2:3b` first. If labels/snippets remain good and runtime is acceptable enough for experimentation, then try the full fixture set or wait for GPU-backed Ollama before broader evaluation.
 
 ### Stage 4: Optional Hosted Research Environments
 
