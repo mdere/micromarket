@@ -201,6 +201,17 @@ class OllamaSentimentProvider:
                 return [item.strip() for item in value.split(",") if item.strip()]
             stripped = value.strip()
             return [stripped] if stripped else []
-        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        if not isinstance(value, list):
             raise SentimentProviderError(f"Ollama field {field_name} must be a list of strings.")
-        return [item.strip() for item in value if item.strip()]
+        items = [self._list_item_to_string(item, field_name) for item in value]
+        return [item for item in items if item]
+
+    def _list_item_to_string(self, item: Any, field_name: str) -> str:
+        if isinstance(item, str):
+            return item.strip()
+        if field_name == "drivers" and isinstance(item, dict):
+            for key in ("driver", "category", "name", "type"):
+                value = item.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        raise SentimentProviderError(f"Ollama field {field_name} must be a list of strings.")

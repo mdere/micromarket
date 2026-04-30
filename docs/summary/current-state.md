@@ -173,7 +173,8 @@ The product is research-only decision support. It should not issue direct buy/se
   - A targeted two-fixture mixed-case rerun was attempted after the prompt tune, but both Ollama calls timed out at about 180 seconds and fell back to baseline. The returned labels/drivers matched the expected fixtures because they were baseline fallback outputs, not native Ollama outputs.
   - The report summary now separates native Ollama label matches from Ollama-or-fallback label matches so timeout fallback rows are not mistaken for provider-quality wins.
   - A follow-up single-fixture no-fallback run reached Ollama after about 244.7 seconds, but the provider rejected the response because `limitations` was returned as a string instead of a list. This means the runtime path can respond, but local CPU latency is very high and schema compliance is fragile.
-  - The Ollama parser now accepts common single-string list fields, converting single `evidence_snippets` and `limitations` strings into one-item lists and comma-separated `drivers` strings into driver lists.
+  - A second single-fixture no-fallback rerun reached Ollama after about 265.5 seconds, but the provider rejected the response because `drivers` was not a plain list of strings.
+  - The Ollama parser now accepts common list-field variants, converting single `evidence_snippets` and `limitations` strings into one-item lists, comma-separated `drivers` strings into driver lists, and driver objects with `driver`, `category`, `name`, or `type` keys into plain driver strings.
   - Next work is to rerun the same single fixture with `--ollama-no-fallback`; if it produces a native Ollama row, inspect label, drivers, evidence snippets, and research-only language before expanding to two mixed fixtures.
 - Environment setup has been clarified:
   - The API reads process environment variables plus local `.env` files via `app/core/config.py`.
@@ -334,7 +335,7 @@ The current work is implementing the first backend vertical slice:
 26. First expanded baseline-vs-Ollama comparison run is documented.
 27. Sentiment comparison follow-up slice is implemented: 20th fixture, report batching controls, Ollama runtime overrides, and Ollama driver prompt tuning.
 28. Targeted two-fixture rerun after prompt tuning timed out on both Ollama calls and fell back to baseline; report summaries now distinguish native Ollama matches from fallback matches.
-29. Single-fixture no-fallback run reached Ollama after about 244.7 seconds but failed schema validation because `limitations` was a string instead of a list; parser tolerance for single-string list fields is implemented.
+29. Single-fixture no-fallback runs reached Ollama after about 244.7s and 265.5s but failed schema validation on list-field variants; parser tolerance for single-string list fields and driver-object fields is implemented.
 30. Next: rerun the same single fixture with `--ollama-no-fallback`, then inspect native Ollama label, drivers, snippets, and research-only language before expanding to two mixed fixtures.
 
 ## Suggested Recommendation To Explore Next

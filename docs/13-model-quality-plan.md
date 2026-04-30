@@ -412,7 +412,7 @@ Implemented after reviewing the first expanded comparison:
   - do not include a driver unless an evidence snippet supports it,
   - use `uncertainty`, `analyst_action`, and `guidance` for the relevant language.
 
-A single-fixture no-fallback run on `mixed_earnings_beat_guidance_cut` reached Ollama after about 244.7 seconds, but the provider rejected the response because `limitations` was returned as a string instead of a list. That is progress over timeout-only failures: the local path can produce a response, but runtime remains very slow and schema compliance is fragile. The parser now tolerates common single-string list fields while preserving the structured provider contract internally.
+Single-fixture no-fallback runs on `mixed_earnings_beat_guidance_cut` reached Ollama after about 244.7 seconds and 265.5 seconds, but the provider rejected the responses because list fields did not always match the strict `list[str]` schema. That is progress over timeout-only failures: the local path can produce responses, but runtime remains very slow and schema compliance is fragile. The parser now tolerates common list-field variants while preserving the structured provider contract internally: single strings become one-item lists, comma-separated driver strings become driver lists, and driver objects with `driver`, `category`, `name`, or `type` keys become plain driver strings.
 
 Next review step: rerun `mixed_earnings_beat_guidance_cut` with `--ollama-no-fallback`. If it produces a native Ollama row, inspect label, drivers, evidence snippets, limitations, and research-only language before expanding to the two mixed fixtures and then the full 20-fixture comparison.
 
