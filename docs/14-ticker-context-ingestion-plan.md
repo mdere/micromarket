@@ -319,12 +319,15 @@ Implementation status:
 - Accepted or tracked ticker-backed suggestions now create or reuse the related `Asset`, link it to the tracking need, and backfill market history over the configured lookback window.
 - `GET /analyses/related-workspaces?ticker=...` returns accepted/tracked related ticker workspaces even before those tickers have their own analyses.
 - The web ticker workspace now includes a `Tracked Related Workspaces` panel for onboarded related tickers.
+- `GET /assets` lists/searches durable ticker workspaces, and `POST /assets/onboard` creates or reuses a ticker workspace and backfills market history before analysis runs exist.
+- The web sidebar now searches real workspaces rather than only recent analysis tickers, and loading a new ticker onboards it automatically.
+- Samsung is mapped as a ticker-backed related asset candidate using `SSNLF` for the current US-focused deterministic seed set.
 
 Next follow-up:
 
 1. Decide whether `tracked` should create or update a durable cross-asset relationship record beyond the per-analysis status.
 2. Add relationship-level notes or review metadata for why a related workspace was accepted.
-3. Expand the deterministic entity dictionary with more ticker aliases and relationship seeds.
+3. Expand the deterministic entity dictionary with more ticker aliases, exchange-aware symbols, and relationship seeds.
 4. Add tests for repeated mentions raising or preserving priority across analyses.
 5. Add later descriptive related-asset movement/sentiment comparison once enough related workspaces have observations.
 

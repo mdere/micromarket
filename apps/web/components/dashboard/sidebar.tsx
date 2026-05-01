@@ -1,8 +1,11 @@
 import { FormEvent } from "react";
 
+import type { AssetWorkspaceResponse } from "@/lib/micromarket-types";
+
 type SidebarProps = {
   articleUrl: string;
   analysisError: string | null;
+  assetWorkspaces: AssetWorkspaceResponse[];
   isSubmitting: boolean;
   manualText: string;
   onAnalysisSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -13,12 +16,12 @@ type SidebarProps = {
   onWorkspaceSubmit: (event: FormEvent<HTMLFormElement>) => void;
   selectedTicker: string;
   tickerInput: string;
-  tickerOptions: string[];
 };
 
 export function DashboardSidebar({
   articleUrl,
   analysisError,
+  assetWorkspaces,
   isSubmitting,
   manualText,
   onAnalysisSubmit,
@@ -28,8 +31,7 @@ export function DashboardSidebar({
   onTickerSelect,
   onWorkspaceSubmit,
   selectedTicker,
-  tickerInput,
-  tickerOptions
+  tickerInput
 }: SidebarProps) {
   return (
     <aside className="panel left-panel">
@@ -46,18 +48,19 @@ export function DashboardSidebar({
         <button type="submit">Load</button>
       </form>
 
-      {tickerOptions.length ? (
+      {assetWorkspaces.length ? (
         <section className="ticker-list" aria-label="recent tickers">
-          <h2>Recent Tickers</h2>
+          <h2>Workspaces</h2>
           <div>
-            {tickerOptions.map((ticker) => (
+            {assetWorkspaces.map((workspace) => (
               <button
-                className={ticker === selectedTicker ? "ticker-pill active" : "ticker-pill"}
-                key={ticker}
+                className={workspace.symbol === selectedTicker ? "ticker-pill active" : "ticker-pill"}
+                key={workspace.id}
                 type="button"
-                onClick={() => onTickerSelect(ticker)}
+                onClick={() => onTickerSelect(workspace.symbol)}
+                title={`${workspace.analysis_count} runs, ${workspace.onboarding_status}`}
               >
-                {ticker}
+                {workspace.symbol}
               </button>
             ))}
           </div>

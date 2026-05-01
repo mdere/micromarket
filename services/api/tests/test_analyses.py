@@ -315,6 +315,8 @@ def test_create_analysis_extracts_related_entities(tmp_path) -> None:
             for snippet in tracking_by_name["TSMC"]["evidence_snippets"]
         )
         assert tracking_by_name["Samsung"]["tracking_type"] == "supplier"
+        assert tracking_by_name["Samsung"]["suggested_symbol"] == "SSNLF"
+        assert tracking_by_name["Samsung"]["onboarding_status"] == "pending"
         assert tracking_by_name["HBM"]["tracking_type"] == "product_theme"
         assert tracking_by_name["HBM"]["suggested_symbol"] is None
         assert tracking_by_name["HBM"]["onboarding_status"] == "not_applicable"

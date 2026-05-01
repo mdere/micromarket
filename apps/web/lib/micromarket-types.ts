@@ -61,6 +61,20 @@ export type RelatedWorkspaceResponse = {
   latest_status: string;
 };
 
+export type AssetWorkspaceResponse = {
+  id: string;
+  symbol: string;
+  name: string | null;
+  asset_type: string;
+  currency: string | null;
+  analysis_count: number;
+  market_history_count: number;
+  history_start_date: string | null;
+  history_end_date: string | null;
+  latest_analysis_at: string | null;
+  onboarding_status: string;
+};
+
 export type MarketQuoteResponse = {
   provider: string;
   price: string | null;

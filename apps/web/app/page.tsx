@@ -16,6 +16,7 @@ import { TimelinePanel } from "@/components/dashboard/timeline-panel";
 import { formatPrice, normalizeTicker } from "@/lib/format";
 import type {
   AnalysisResponse,
+  AssetWorkspaceResponse,
   ArticleHistoryItem,
   EvaluationRefreshResponse,
   EvaluationSummaryResponse,
@@ -32,6 +33,7 @@ export default function Home() {
   const [articleUrl, setArticleUrl] = useState("");
   const [activeAnalysis, setActiveAnalysis] = useState<AnalysisResponse | null>(null);
   const [tickerAnalyses, setTickerAnalyses] = useState<AnalysisResponse[]>([]);
+  const [assetWorkspaces, setAssetWorkspaces] = useState<AssetWorkspaceResponse[]>([]);
   const [relatedWorkspaces, setRelatedWorkspaces] = useState<RelatedWorkspaceResponse[]>([]);
   const [recentAnalyses, setRecentAnalyses] = useState<AnalysisResponse[]>([]);
   const [evaluationSummary, setEvaluationSummary] = useState<EvaluationSummaryResponse | null>(
@@ -61,19 +63,6 @@ export default function Home() {
       ) ?? activeAnalysis.forecast_runs[0] ?? null
     );
   }, [activeAnalysis]);
-
-  const tickerOptions = useMemo(() => {
-    const seen = new Set<string>();
-    return recentAnalyses
-      .map((analysis) => analysis.ticker)
-      .filter((ticker) => {
-        if (seen.has(ticker)) {
-          return false;
-        }
-        seen.add(ticker);
-        return true;
-      });
-  }, [recentAnalyses]);
 
   const articleHistory = useMemo<ArticleHistoryItem[]>(() => {
     const articles = new Map<string, ArticleHistoryItem>();
@@ -106,6 +95,33 @@ export default function Home() {
     } catch {
       setWorkspaceError("API not reachable while loading recent analyses.");
     }
+  }
+
+  async function loadAssetWorkspaces(query?: string) {
+    try {
+      const suffix = query ? `?query=${encodeURIComponent(query)}` : "";
+      const response = await fetch(`${apiBaseUrl}/assets${suffix}`, { cache: "no-store" });
+      if (!response.ok) {
+        setWorkspaceError(`Workspaces unavailable (${response.status}).`);
+        return;
+      }
+      setAssetWorkspaces((await response.json()) as AssetWorkspaceResponse[]);
+    } catch {
+      setWorkspaceError("API not reachable while loading workspaces.");
+    }
+  }
+
+  async function onboardAssetWorkspace(symbol: string) {
+    const response = await fetch(`${apiBaseUrl}/assets/onboard`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbol })
+    });
+    const body = await response.json();
+    if (!response.ok) {
+      throw new Error(body.detail ?? `Workspace onboarding failed (${response.status}).`);
+    }
+    return body as AssetWorkspaceResponse;
   }
 
   async function loadEvaluationSummary() {
@@ -164,6 +180,14 @@ export default function Home() {
     setTickerInput(normalized);
     setStatusMessage(`Loading ${normalized} history`);
     try {
+      try {
+        await onboardAssetWorkspace(normalized);
+        await loadAssetWorkspaces();
+      } catch (error) {
+        setWorkspaceError(
+          error instanceof Error ? error.message : `${normalized} workspace onboarding failed.`
+        );
+      }
       const response = await fetch(`${apiBaseUrl}/analyses?ticker=${normalized}`, {
         cache: "no-store"
       });
@@ -201,6 +225,7 @@ export default function Home() {
 
   useEffect(() => {
     void loadRecentAnalyses();
+    void loadAssetWorkspaces();
     void loadTickerWorkspace(selectedTicker);
     void loadEvaluationSummary();
   }, []);
@@ -256,6 +281,7 @@ export default function Home() {
       setArticleUrl("");
       setStatusMessage("Analysis completed");
       await loadRecentAnalyses();
+      await loadAssetWorkspaces();
       await loadTickerWorkspace(analysis.ticker, analysis.id);
       await loadEvaluationSummary();
     } catch {
@@ -309,6 +335,7 @@ export default function Home() {
         analyses.map((analysis) => replaceTrackingNeed(analysis, updated as TrackingNeedResponse))
       );
       if ((updated as TrackingNeedResponse).onboarding_status === "onboarded") {
+        await loadAssetWorkspaces();
         await loadRelatedWorkspaces(selectedTicker);
       }
       setStatusMessage(`Signal marked ${status}`);
@@ -331,17 +358,20 @@ export default function Home() {
         <DashboardSidebar
           articleUrl={articleUrl}
           analysisError={analysisError}
+          assetWorkspaces={assetWorkspaces}
           isSubmitting={isSubmitting}
           manualText={manualText}
           onAnalysisSubmit={handleAnalysisSubmit}
           onArticleUrlChange={setArticleUrl}
           onManualTextChange={setManualText}
-          onTickerChange={setTickerInput}
+          onTickerChange={(value) => {
+            setTickerInput(value);
+            void loadAssetWorkspaces(value);
+          }}
           onTickerSelect={(ticker) => void loadTickerWorkspace(ticker)}
           onWorkspaceSubmit={handleWorkspaceSubmit}
           selectedTicker={selectedTicker}
           tickerInput={tickerInput}
-          tickerOptions={tickerOptions}
         />
 
         <section className="main-panel">

@@ -67,10 +67,11 @@ class DeterministicEntityExtractor:
             confidence=0.90,
         ),
         EntityDefinition(
-            entity_type="company",
+            entity_type="asset",
             name="Samsung",
             canonical_name="samsung",
-            aliases=("Samsung", "Samsung Electronics"),
+            symbol="SSNLF",
+            aliases=("Samsung", "Samsung Electronics", "SSNLF"),
             relationship_type="supplier",
             confidence=0.85,
         ),

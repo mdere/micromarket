@@ -155,6 +155,9 @@ The product is research-only decision support. It should not issue direct buy/se
   - Accepted or tracked ticker-backed suggestions now create or reuse the related `Asset`, link it to the tracking need, and backfill market history over the configured lookback window.
   - `GET /analyses/related-workspaces?ticker=...` now returns accepted/tracked related ticker workspaces even before those tickers have their own analyses.
   - The web ticker workspace now includes a `Tracked Related Workspaces` panel for onboarded related tickers.
+  - `GET /assets` lists/searches durable ticker workspaces, and `POST /assets/onboard` creates or reuses a ticker workspace and backfills market history before analysis runs exist.
+  - The web sidebar now searches real workspaces rather than only recent analysis tickers, and loading a new ticker onboards it automatically.
+  - Samsung is now mapped as a ticker-backed related asset candidate using `SSNLF` for the current US-focused deterministic seed set.
   - Next follow-up should decide whether `tracked` should create or update a durable cross-asset relationship record beyond the per-analysis status.
   - Correlation/proportional-impact analysis should wait until related assets have their own sentiment and market-history observations.
 - Curated sentiment fixture slice is implemented:
