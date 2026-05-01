@@ -76,6 +76,12 @@ curl -X POST http://localhost:8000/analyses \
   }'
 ```
 
+Some publishers block automated extraction or require an authenticated browser
+session. If a URL-only run returns a message that the publisher blocked
+extraction with HTTP `401` or `403`, paste the article text manually and include
+the URL as source context instead. Manual text takes precedence when both text
+and URL are supplied.
+
 The response should include:
 
 - persisted article metadata,

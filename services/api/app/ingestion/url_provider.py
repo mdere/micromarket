@@ -37,6 +37,8 @@ class TrafilaturaURLExtractionProvider:
                 headers={"User-Agent": self.user_agent},
             )
             response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise URLExtractionError(_fetch_error_message(normalized_url, exc.response)) from exc
         except httpx.HTTPError as exc:
             raise URLExtractionError(f"Could not fetch article URL {normalized_url}: {exc}") from exc
 
@@ -80,3 +82,14 @@ class TrafilaturaURLExtractionProvider:
         title = getattr(metadata, "title", None) if metadata is not None else None
         source = getattr(metadata, "sitename", None) if metadata is not None else None
         return text or "", title, source
+
+
+def _fetch_error_message(url: str, response: httpx.Response) -> str:
+    status_code = response.status_code
+    if status_code in {401, 403}:
+        return (
+            f"Could not fetch article URL {url}: the publisher blocked automated extraction "
+            f"with HTTP {status_code}. Paste the article text manually to continue, or use a "
+            "freely accessible source URL."
+        )
+    return f"Could not fetch article URL {url}: HTTP {status_code} {response.reason_phrase}."

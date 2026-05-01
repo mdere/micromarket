@@ -75,6 +75,7 @@ The product is research-only decision support. It should not issue direct buy/se
   - `app/ingestion/url_provider.py` defines a URL extraction provider protocol and `trafilatura` implementation.
   - `POST /analyses` accepts URL-only articles, stores raw HTML and extracted text artifacts, and runs the existing sentiment/forecast pipeline.
   - Manual text remains supported and takes precedence when both text and URL are supplied.
+  - Publisher-blocked URL fetches such as HTTP `401` or `403` now return a clearer message that recommends pasting article text manually or using a freely accessible source.
   - Tests use a fake URL extraction provider so URL ingestion stays offline and deterministic.
 - Evidence filtering slice is implemented:
   - `app/ingestion/evidence.py` scores article relevance with deterministic ticker/market-context rules.
