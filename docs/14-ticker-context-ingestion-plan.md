@@ -96,28 +96,39 @@ Later providers can use local LLM extraction, but they should write to the same 
 
 ## Entity Resolution And Training Preparation
 
-The current `DeterministicEntityExtractor` is static. Adding Samsung, TSMC, Microsoft, or Amazon teaches the application only because those aliases are explicitly present in code. It does not learn new mappings automatically. If an article mentions `Coke`, `Coca-Cola`, or `Disney`, the extractor will not map those names to `KO` or `DIS` until those aliases are added to a trusted seed source or discovered by a later resolver.
+The current `DeterministicEntityExtractor` is static. Adding Samsung, TSMC, Microsoft, or Amazon teaches the application only because those aliases are explicitly present in the reviewed seed registry. It does not learn new mappings automatically. If an article mentions an unknown company, the extractor will not map that name to a ticker until the alias is added to the trusted seed source or discovered by a later resolver.
 
 This static behavior is intentional for the current phase: it is transparent, local-first, testable, and preserves lineage. The next direction should make the seed source easier to grow without pretending the system has trained itself.
+
+Important design clarification before implementation: the seed file should be a reviewed bootstrap source, not the permanent runtime source of truth. Broad market coverage such as S&P 500/VOO constituents should be imported as a dated snapshot into a database-backed registry. Runtime extraction should eventually read from that registry, while the JSON/CSV seed snapshot remains a versioned input and test fixture.
 
 Recommended staged direction:
 
 1. Move hard-coded entity definitions out of Python into a versioned local seed file.
-   - Candidate location: `data/seeds/entities.json` or `services/api/app/ingestion/entity_seeds.json`.
+   - Candidate/temporary location: `services/api/app/ingestion/entity_seeds.json`.
    - Each seed should include canonical name, aliases, entity type, optional ticker symbol, relationship hints, confidence, source, and reviewed timestamp.
    - Examples: Coca-Cola/`KO`, Disney/`DIS`, Walmart/`WMT`, Costco/`COST`, Broadcom/`AVGO`, Intel/`INTC`, Alphabet/`GOOGL`, Meta/`META`.
-2. Keep deterministic seed matching as the first pass.
+2. Add a seed import/upsert process.
+   - Candidate command: `python -m app.ingestion.seed_entities --source ...`.
+   - Import broad reviewed snapshots such as S&P 500/VOO constituents into the local database.
+   - Preserve `source`, `source_date`, `reviewed_at`, `exchange`, `sector`, aliases, and symbol metadata.
+   - The import should be idempotent so rerunning it updates reviewed metadata without duplicating entities.
+3. Make runtime extraction read reviewed definitions from the database registry.
+   - The database should become the runtime source of truth after import.
+   - The seed file remains a versioned bootstrap/review artifact.
+   - Future accepted/corrected mappings can be promoted into the registry without editing Python code.
+4. Keep deterministic seed matching as the first pass.
    - Seed hits should remain high-trust because they come from a reviewed local registry.
    - All seed hits should continue writing `entities`, `article_entities`, `asset_relationships`, and `analysis_tracking_needs` with provider/model/source lineage.
-3. Add a lower-confidence candidate resolver after deterministic seeds.
+5. Add a lower-confidence candidate resolver after deterministic seeds.
    - Candidate resolver may use a local symbol registry, provider interface, or local LLM.
    - Candidate hits should be marked as suggestions needing review, not trusted mappings.
    - Provider outputs must preserve raw evidence, source/provider, model version, and confidence.
-4. Add review and promotion workflow.
+6. Add review and promotion workflow.
    - A user can accept, correct, or ignore candidate mappings.
    - Accepted mappings can become durable database entities and later be exported/promoted back into the reviewed seed registry.
    - Corrections should preserve the original candidate and the reviewed replacement for training/evaluation.
-5. Build training/evaluation data from reviewed decisions.
+7. Build training/evaluation data from reviewed decisions.
    - Positive examples: accepted/correct mappings with snippets and context.
    - Negative examples: ignored or corrected wrong mappings.
    - Ambiguous examples: mentions that are company names but not materially related to the primary ticker.
@@ -358,16 +369,21 @@ Implementation status:
 - `GET /assets` lists/searches durable ticker workspaces, and `POST /assets/onboard` creates or reuses a ticker workspace and backfills market history before analysis runs exist.
 - The web sidebar now searches real workspaces rather than only recent analysis tickers, and loading a new ticker onboards it automatically.
 - Samsung is mapped as a ticker-backed related asset candidate using `SSNLF` for the current US-focused deterministic seed set.
+- Proposed direction: deterministic entity definitions should move out of Python into reviewed seed snapshots, then be imported into a database-backed entity registry.
+- Broad seed coverage such as S&P 500/VOO constituents should be treated as dated reviewed snapshots, not hand-maintained runtime code.
 
 Next follow-up:
 
-1. Move deterministic entity definitions from Python into a reviewed, versioned local seed file.
-2. Add more seed coverage for common companies and exchange-aware symbols, such as Coca-Cola/`KO` and Disney/`DIS`.
-3. Decide whether `tracked` should create or update a durable cross-asset relationship record beyond the per-analysis status.
-4. Add relationship-level notes or review metadata for why a related workspace was accepted.
-5. Later add a lower-confidence candidate resolver and reviewed-decision dataset for entity extraction training/evaluation.
-6. Add tests for repeated mentions raising or preserving priority across analyses.
-7. Add later descriptive related-asset movement/sentiment comparison once enough related workspaces have observations.
+1. Design the DB-backed entity registry and seed import/upsert process before refactoring `DeterministicEntityExtractor`.
+2. Decide whether to use a new `entity_aliases` / `entity_registry` table or extend existing `entities` for reviewed seed metadata.
+3. Add broad S&P 500/VOO-style reviewed seed coverage as a dated snapshot.
+4. Make runtime extraction read reviewed definitions from the database after import.
+5. Add seed-review metadata/tooling so new aliases can be reviewed and promoted without editing Python code.
+6. Decide whether `tracked` should create or update a durable cross-asset relationship record beyond the per-analysis status.
+7. Add relationship-level notes or review metadata for why a related workspace was accepted.
+8. Later add a lower-confidence candidate resolver and reviewed-decision dataset for entity extraction training/evaluation.
+9. Add tests for repeated mentions raising or preserving priority across analyses.
+10. Add later descriptive related-asset movement/sentiment comparison once enough related workspaces have observations.
 
 ## Guardrails
 
