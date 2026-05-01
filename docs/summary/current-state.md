@@ -158,7 +158,9 @@ The product is research-only decision support. It should not issue direct buy/se
   - `GET /assets` lists/searches durable ticker workspaces, and `POST /assets/onboard` creates or reuses a ticker workspace and backfills market history before analysis runs exist.
   - The web sidebar now searches real workspaces rather than only recent analysis tickers, and loading a new ticker onboards it automatically.
   - Samsung is now mapped as a ticker-backed related asset candidate using `SSNLF` for the current US-focused deterministic seed set.
-  - Next follow-up should decide whether `tracked` should create or update a durable cross-asset relationship record beyond the per-analysis status.
+  - Entity-resolution/training preparation is now documented in `docs/14-ticker-context-ingestion-plan.md`.
+  - Current extractor behavior is static: adding Samsung does not train the model; aliases must be in the reviewed deterministic seed set or discovered later by a candidate resolver.
+  - Next follow-up should move hard-coded entity definitions into a reviewed local seed file, then add broader seed coverage such as Coca-Cola/`KO` and Disney/`DIS`.
   - Correlation/proportional-impact analysis should wait until related assets have their own sentiment and market-history observations.
 - Curated sentiment fixture slice is implemented:
   - `services/api/tests/fixtures/sentiment_curated_examples.json` contains 20 deterministic examples across positive, negative, neutral, mixed, weak-evidence, negation, analyst-action, regulatory/product, supply-chain, related-entity, uncertainty, guidance-cut, and irrelevant-ticker cases.

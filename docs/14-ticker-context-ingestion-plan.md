@@ -94,6 +94,42 @@ should normalize to the same related entity where possible.
 
 Later providers can use local LLM extraction, but they should write to the same entity contract and preserve provider/model version lineage.
 
+## Entity Resolution And Training Preparation
+
+The current `DeterministicEntityExtractor` is static. Adding Samsung, TSMC, Microsoft, or Amazon teaches the application only because those aliases are explicitly present in code. It does not learn new mappings automatically. If an article mentions `Coke`, `Coca-Cola`, or `Disney`, the extractor will not map those names to `KO` or `DIS` until those aliases are added to a trusted seed source or discovered by a later resolver.
+
+This static behavior is intentional for the current phase: it is transparent, local-first, testable, and preserves lineage. The next direction should make the seed source easier to grow without pretending the system has trained itself.
+
+Recommended staged direction:
+
+1. Move hard-coded entity definitions out of Python into a versioned local seed file.
+   - Candidate location: `data/seeds/entities.json` or `services/api/app/ingestion/entity_seeds.json`.
+   - Each seed should include canonical name, aliases, entity type, optional ticker symbol, relationship hints, confidence, source, and reviewed timestamp.
+   - Examples: Coca-Cola/`KO`, Disney/`DIS`, Walmart/`WMT`, Costco/`COST`, Broadcom/`AVGO`, Intel/`INTC`, Alphabet/`GOOGL`, Meta/`META`.
+2. Keep deterministic seed matching as the first pass.
+   - Seed hits should remain high-trust because they come from a reviewed local registry.
+   - All seed hits should continue writing `entities`, `article_entities`, `asset_relationships`, and `analysis_tracking_needs` with provider/model/source lineage.
+3. Add a lower-confidence candidate resolver after deterministic seeds.
+   - Candidate resolver may use a local symbol registry, provider interface, or local LLM.
+   - Candidate hits should be marked as suggestions needing review, not trusted mappings.
+   - Provider outputs must preserve raw evidence, source/provider, model version, and confidence.
+4. Add review and promotion workflow.
+   - A user can accept, correct, or ignore candidate mappings.
+   - Accepted mappings can become durable database entities and later be exported/promoted back into the reviewed seed registry.
+   - Corrections should preserve the original candidate and the reviewed replacement for training/evaluation.
+5. Build training/evaluation data from reviewed decisions.
+   - Positive examples: accepted/correct mappings with snippets and context.
+   - Negative examples: ignored or corrected wrong mappings.
+   - Ambiguous examples: mentions that are company names but not materially related to the primary ticker.
+   - This dataset can later evaluate LLM/entity resolver quality before changing defaults.
+
+Important distinction:
+
+- deterministic seed match: trusted local mapping,
+- provider/LLM discovered match: candidate needing review,
+- accepted candidate: durable local mapping and possible future seed,
+- ignored/corrected candidate: training signal for what not to map.
+
 ## Suggested Data Additions
 
 ### `market_price_history`
@@ -325,11 +361,13 @@ Implementation status:
 
 Next follow-up:
 
-1. Decide whether `tracked` should create or update a durable cross-asset relationship record beyond the per-analysis status.
-2. Add relationship-level notes or review metadata for why a related workspace was accepted.
-3. Expand the deterministic entity dictionary with more ticker aliases, exchange-aware symbols, and relationship seeds.
-4. Add tests for repeated mentions raising or preserving priority across analyses.
-5. Add later descriptive related-asset movement/sentiment comparison once enough related workspaces have observations.
+1. Move deterministic entity definitions from Python into a reviewed, versioned local seed file.
+2. Add more seed coverage for common companies and exchange-aware symbols, such as Coca-Cola/`KO` and Disney/`DIS`.
+3. Decide whether `tracked` should create or update a durable cross-asset relationship record beyond the per-analysis status.
+4. Add relationship-level notes or review metadata for why a related workspace was accepted.
+5. Later add a lower-confidence candidate resolver and reviewed-decision dataset for entity extraction training/evaluation.
+6. Add tests for repeated mentions raising or preserving priority across analyses.
+7. Add later descriptive related-asset movement/sentiment comparison once enough related workspaces have observations.
 
 ## Guardrails
 
