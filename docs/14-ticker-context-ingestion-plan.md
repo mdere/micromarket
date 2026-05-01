@@ -373,11 +373,12 @@ Implementation status:
 - Broad seed coverage such as S&P 500/VOO constituents should be treated as dated reviewed snapshots, not hand-maintained runtime code.
 - `entity_seed_definitions` is implemented as the DB-backed reviewed seed registry.
 - `python -m app.ingestion.seed_entities` imports the checked-in `entity_seed_snapshot.json` bootstrap file idempotently.
+- `python -m app.ingestion.seed_entities --sp500-wikipedia` can import the current Wikipedia S&P 500 component table as a dated broad-coverage snapshot.
 - Analysis creation now prefers reviewed DB seed definitions when present and falls back to the built-in deterministic definitions if the registry has not been imported yet.
 
 Next follow-up:
 
-1. Add broad S&P 500/VOO-style reviewed seed coverage as a dated snapshot.
+1. Run and review the S&P 500 snapshot import locally, then decide whether to export a reviewed snapshot artifact into the repo.
 2. Add seed-review metadata/tooling so new aliases can be reviewed and promoted without editing Python code.
 3. Decide whether `tracked` should create or update a durable cross-asset relationship record beyond the per-analysis status.
 4. Add relationship-level notes or review metadata for why a related workspace was accepted.

@@ -233,6 +233,16 @@ The checked-in bootstrap snapshot is `app/ingestion/entity_seed_snapshot.json`.
 It is an idempotent import into the local DB-backed entity seed registry; rerun
 it when the reviewed seed snapshot changes.
 
+To import a broad S&P 500 component snapshot from Wikipedia into the same
+registry:
+
+```bash
+python -m app.ingestion.seed_entities --sp500-wikipedia
+```
+
+This is network-dependent and should be treated as a dated reviewed snapshot,
+not a live runtime dependency.
+
 ## Tests And Linting
 
 Run tests:
