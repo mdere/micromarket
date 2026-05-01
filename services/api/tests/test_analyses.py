@@ -11,6 +11,7 @@ from app.core.config import Settings, get_settings
 from app.db.models import Base
 from app.db.session import get_db
 from app.ingestion.dependencies import get_url_extraction_provider
+from app.ingestion.entity_registry import import_entity_seed_definitions, load_seed_file
 from app.ingestion.url_provider import URLExtractionError, URLExtractionResult
 from app.main import app
 from app.market_data.dependencies import get_market_data_provider
@@ -92,6 +93,9 @@ def build_test_app(tmp_path, url_extraction_provider=None):
     )
     testing_session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     Base.metadata.create_all(bind=engine)
+    with testing_session() as db:
+        import_entity_seed_definitions(db, load_seed_file())
+        db.commit()
 
     def override_db() -> Generator[Session, None, None]:
         db = testing_session()

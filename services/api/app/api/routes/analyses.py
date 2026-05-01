@@ -26,6 +26,7 @@ from app.forecasting.dependencies import get_forecast_provider
 from app.forecasting.provider import ForecastInput, ForecastProvider
 from app.ingestion.dependencies import get_url_extraction_provider
 from app.ingestion.entities import DeterministicEntityExtractor, ExtractedEntity
+from app.ingestion.entity_registry import load_reviewed_entity_definitions
 from app.ingestion.evidence import ArticleEvidencePolicy
 from app.ingestion.service import ArticleIngestionService, NormalizedArticle
 from app.ingestion.tracking import TrackingNeed, TrackingNeedGenerator
@@ -155,7 +156,8 @@ def create_analysis(
     ingestion = ArticleIngestionService()
     artifacts = ArtifactStore(settings.artifact_root)
     evidence_policy = ArticleEvidencePolicy()
-    entity_extractor = DeterministicEntityExtractor()
+    reviewed_entity_definitions = load_reviewed_entity_definitions(db)
+    entity_extractor = DeterministicEntityExtractor(reviewed_entity_definitions or None)
     tracking_need_generator = TrackingNeedGenerator()
     seen_hashes: set[str] = set()
     included_sentiment_labels: list[str] = []

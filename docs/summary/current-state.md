@@ -160,8 +160,10 @@ The product is research-only decision support. It should not issue direct buy/se
   - Samsung is now mapped as a ticker-backed related asset candidate using `SSNLF` for the current US-focused deterministic seed set.
   - Entity-resolution/training preparation is now documented in `docs/14-ticker-context-ingestion-plan.md`.
   - Current extractor behavior is still static: seed additions do not train the model; aliases must be reviewed seeds or later lower-confidence resolver candidates.
-  - Proposed entity direction: use reviewed S&P 500/VOO-style seed snapshots as bootstrap input, import/upsert them into a DB-backed entity registry, then make runtime extraction read reviewed definitions from the database rather than a JSON file.
-  - Next follow-up should design the DB-backed entity registry and seed import process before refactoring `DeterministicEntityExtractor`.
+  - `entity_seed_definitions` is implemented as the DB-backed reviewed seed registry with Alembic revision `20260501_0008`.
+  - `python -m app.ingestion.seed_entities` imports the checked-in `entity_seed_snapshot.json` bootstrap file idempotently.
+  - Analysis creation now prefers reviewed DB seed definitions when present and falls back to the built-in deterministic definitions if the registry has not been imported yet.
+  - Next follow-up should add broad S&P 500/VOO-style reviewed seed coverage as a dated snapshot.
   - Correlation/proportional-impact analysis should wait until related assets have their own sentiment and market-history observations.
 - Curated sentiment fixture slice is implemented:
   - `services/api/tests/fixtures/sentiment_curated_examples.json` contains 20 deterministic examples across positive, negative, neutral, mixed, weak-evidence, negation, analyst-action, regulatory/product, supply-chain, related-entity, uncertainty, guidance-cut, and irrelevant-ticker cases.

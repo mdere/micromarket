@@ -127,13 +127,16 @@ class DeterministicEntityExtractor:
         ),
     )
 
+    def __init__(self, entity_definitions: tuple[EntityDefinition, ...] | None = None) -> None:
+        self._entity_definitions = entity_definitions or self._entities
+
     def extract(self, text: str, ticker: str) -> list[ExtractedEntity]:
         normalized_ticker = ticker.upper().strip()
         sentences = _sentences(text)
         results: list[ExtractedEntity] = []
         seen: set[tuple[str, str]] = set()
 
-        for definition in self._entities:
+        for definition in self._entity_definitions:
             if definition.symbol == normalized_ticker:
                 continue
             snippets = _matching_snippets(sentences, definition.aliases)

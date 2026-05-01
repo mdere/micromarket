@@ -208,6 +208,30 @@ class Entity(Base):
     asset_relationships: Mapped[list["AssetRelationship"]] = relationship(back_populates="entity")
 
 
+class EntitySeedDefinition(Base):
+    __tablename__ = "entity_seed_definitions"
+    __table_args__ = (UniqueConstraint("source", "entity_type", "canonical_name"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    entity_type: Mapped[str] = mapped_column(String(32))
+    name: Mapped[str] = mapped_column(String(255))
+    symbol: Mapped[str | None] = mapped_column(String(32), index=True)
+    canonical_name: Mapped[str] = mapped_column(String(255), index=True)
+    aliases: Mapped[list[str]] = mapped_column(JSON, default=list)
+    relationship_type: Mapped[str] = mapped_column(String(64), default="mentioned_with")
+    confidence_score: Mapped[Decimal] = mapped_column(Numeric(6, 5))
+    source: Mapped[str] = mapped_column(String(128))
+    source_date: Mapped[date | None] = mapped_column(Date)
+    reviewed_at: Mapped[date | None] = mapped_column(Date)
+    exchange: Mapped[str | None] = mapped_column(String(64))
+    sector: Mapped[str | None] = mapped_column(String(128))
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+
 class ArticleEntity(Base):
     __tablename__ = "article_entities"
     __table_args__ = (UniqueConstraint("article_id", "entity_id", "provider"),)

@@ -223,6 +223,16 @@ Run database migrations from `services/api`:
 alembic upgrade head
 ```
 
+Import reviewed entity seed definitions after migrations:
+
+```bash
+python -m app.ingestion.seed_entities
+```
+
+The checked-in bootstrap snapshot is `app/ingestion/entity_seed_snapshot.json`.
+It is an idempotent import into the local DB-backed entity seed registry; rerun
+it when the reviewed seed snapshot changes.
+
 ## Tests And Linting
 
 Run tests:
