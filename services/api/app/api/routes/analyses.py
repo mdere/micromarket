@@ -38,6 +38,7 @@ from app.schemas.analysis import (
     AnalysisCreate,
     AnalysisResponse,
     ArticleInput,
+    RelatedWorkspaceResponse,
     TrackingNeedResponse,
     TrackingNeedUpdate,
 )
@@ -351,6 +352,27 @@ def update_tracking_need_status(
     return _tracking_need_to_response(tracking_need)
 
 
+@router.get("/related-workspaces", response_model=list[RelatedWorkspaceResponse])
+def list_related_workspaces(
+    ticker: str = Query(min_length=1, max_length=16),
+    db: Session = Depends(get_db),
+) -> list[RelatedWorkspaceResponse]:
+    primary_symbol = ticker.upper().strip()
+    tracking_needs = db.scalars(
+        select(AnalysisTrackingNeed)
+        .join(Asset, AnalysisTrackingNeed.primary_asset_id == Asset.id)
+        .where(Asset.symbol == primary_symbol)
+        .where(AnalysisTrackingNeed.related_asset_id.is_not(None))
+        .where(AnalysisTrackingNeed.status.in_(["accepted", "tracked"]))
+        .options(
+            selectinload(AnalysisTrackingNeed.entity),
+            selectinload(AnalysisTrackingNeed.related_asset),
+        )
+        .order_by(AnalysisTrackingNeed.updated_at.desc())
+    ).all()
+    return _related_workspace_responses(tracking_needs)
+
+
 @router.get("/{analysis_id}", response_model=AnalysisResponse)
 def get_analysis(analysis_id: str, db: Session = Depends(get_db)) -> AnalysisResponse:
     analysis = _get_analysis(db, analysis_id)
@@ -620,6 +642,43 @@ def _onboard_related_asset(
         provider=market_data_provider,
         analysis_as_of=tracking_need.analysis.analysis_as_of or utc_now(),
         lookback_days=settings.market_lookback_days,
+    )
+
+
+def _related_workspace_responses(
+    tracking_needs: list[AnalysisTrackingNeed],
+) -> list[RelatedWorkspaceResponse]:
+    grouped: dict[str, list[AnalysisTrackingNeed]] = {}
+    for need in tracking_needs:
+        if need.related_asset_id is None:
+            continue
+        grouped.setdefault(need.related_asset_id, []).append(need)
+
+    responses: list[RelatedWorkspaceResponse] = []
+    for related_asset_id, needs in grouped.items():
+        latest = max(needs, key=lambda item: item.updated_at)
+        related_asset = latest.related_asset
+        responses.append(
+            RelatedWorkspaceResponse(
+                related_asset_id=related_asset_id,
+                symbol=related_asset.symbol if related_asset is not None else latest.suggested_symbol or "",
+                name=related_asset.name if related_asset is not None else latest.entity.name,
+                relationship_types=sorted({need.tracking_type for need in needs}),
+                statuses=sorted({need.status for need in needs}),
+                source_analysis_ids=sorted({need.analysis_id for need in needs}),
+                evidence_snippets=_merge_snippets(
+                    [],
+                    [snippet for need in needs for snippet in (need.evidence_snippets or [])],
+                ),
+                priority_score=_decimal_to_str(max(need.priority_score for need in needs)) or "0",
+                mention_count=len(needs),
+                latest_status=latest.status,
+            )
+        )
+    return sorted(
+        responses,
+        key=lambda item: (Decimal(item.priority_score), item.mention_count, item.symbol),
+        reverse=True,
     )
 
 

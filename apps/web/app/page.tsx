@@ -10,6 +10,7 @@ import { EvidencePanel } from "@/components/dashboard/evidence-panel";
 import { ForecastPanel } from "@/components/dashboard/forecast-panel";
 import { Metric } from "@/components/dashboard/metric";
 import { RelatedSignalsPanel } from "@/components/dashboard/related-signals-panel";
+import { RelatedWorkspacesPanel } from "@/components/dashboard/related-workspaces-panel";
 import { SentimentMarketGrid } from "@/components/dashboard/sentiment-market-grid";
 import { TimelinePanel } from "@/components/dashboard/timeline-panel";
 import { formatPrice, normalizeTicker } from "@/lib/format";
@@ -18,6 +19,7 @@ import type {
   ArticleHistoryItem,
   EvaluationRefreshResponse,
   EvaluationSummaryResponse,
+  RelatedWorkspaceResponse,
   TrackingNeedResponse
 } from "@/lib/micromarket-types";
 
@@ -30,6 +32,7 @@ export default function Home() {
   const [articleUrl, setArticleUrl] = useState("");
   const [activeAnalysis, setActiveAnalysis] = useState<AnalysisResponse | null>(null);
   const [tickerAnalyses, setTickerAnalyses] = useState<AnalysisResponse[]>([]);
+  const [relatedWorkspaces, setRelatedWorkspaces] = useState<RelatedWorkspaceResponse[]>([]);
   const [recentAnalyses, setRecentAnalyses] = useState<AnalysisResponse[]>([]);
   const [evaluationSummary, setEvaluationSummary] = useState<EvaluationSummaryResponse | null>(
     null
@@ -43,6 +46,7 @@ export default function Home() {
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(false);
+  const [isLoadingRelatedWorkspaces, setIsLoadingRelatedWorkspaces] = useState(false);
   const [isLoadingEvaluation, setIsLoadingEvaluation] = useState(false);
   const [isRefreshingEvaluation, setIsRefreshingEvaluation] = useState(false);
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
@@ -155,6 +159,7 @@ export default function Home() {
 
     setWorkspaceError(null);
     setIsLoadingWorkspace(true);
+    setIsLoadingRelatedWorkspaces(true);
     setSelectedTicker(normalized);
     setTickerInput(normalized);
     setStatusMessage(`Loading ${normalized} history`);
@@ -170,6 +175,7 @@ export default function Home() {
       setTickerAnalyses(analyses);
       const preferred = analyses.find((analysis) => analysis.id === preferredAnalysisId);
       setActiveAnalysis(preferred ?? analyses[0] ?? null);
+      await loadRelatedWorkspaces(normalized);
       setStatusMessage(
         analyses.length ? `${normalized} history loaded` : `${normalized} workspace ready`
       );
@@ -177,7 +183,20 @@ export default function Home() {
       setWorkspaceError("API not reachable while loading ticker history.");
     } finally {
       setIsLoadingWorkspace(false);
+      setIsLoadingRelatedWorkspaces(false);
     }
+  }
+
+  async function loadRelatedWorkspaces(symbol: string) {
+    const response = await fetch(`${apiBaseUrl}/analyses/related-workspaces?ticker=${symbol}`, {
+      cache: "no-store"
+    });
+    if (!response.ok) {
+      setWorkspaceError(`${symbol} related workspaces unavailable (${response.status}).`);
+      setRelatedWorkspaces([]);
+      return;
+    }
+    setRelatedWorkspaces((await response.json()) as RelatedWorkspaceResponse[]);
   }
 
   useEffect(() => {
@@ -289,6 +308,9 @@ export default function Home() {
       setTickerAnalyses((analyses) =>
         analyses.map((analysis) => replaceTrackingNeed(analysis, updated as TrackingNeedResponse))
       );
+      if ((updated as TrackingNeedResponse).onboarding_status === "onboarded") {
+        await loadRelatedWorkspaces(selectedTicker);
+      }
       setStatusMessage(`Signal marked ${status}`);
     } catch {
       setWorkspaceError("API not reachable while updating related signal.");
@@ -355,6 +377,13 @@ export default function Home() {
             }
             onTickerSelect={(ticker) => void loadTickerWorkspace(ticker)}
             trackingNeeds={activeAnalysis?.tracking_needs ?? []}
+          />
+
+          <RelatedWorkspacesPanel
+            isLoading={isLoadingRelatedWorkspaces}
+            onTickerSelect={(ticker) => void loadTickerWorkspace(ticker)}
+            relatedWorkspaces={relatedWorkspaces}
+            selectedTicker={selectedTicker}
           />
 
           <EvaluationMonitor

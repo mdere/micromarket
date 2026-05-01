@@ -317,11 +317,13 @@ Implementation status:
 - `PATCH /analyses/tracking-needs/{tracking_need_id}` lets a user mark a suggestion as `suggested`, `accepted`, `ignored`, or `tracked`.
 - The web `Related Signals` panel exposes Accept, Tracked, and Ignore actions and updates the selected analysis without rerunning sentiment or forecasts.
 - Accepted or tracked ticker-backed suggestions now create or reuse the related `Asset`, link it to the tracking need, and backfill market history over the configured lookback window.
+- `GET /analyses/related-workspaces?ticker=...` returns accepted/tracked related ticker workspaces even before those tickers have their own analyses.
+- The web ticker workspace now includes a `Tracked Related Workspaces` panel for onboarded related tickers.
 
 Next follow-up:
 
-1. Add a durable related-workspace list so onboarded assets can be browsed even before they have analyses of their own.
-2. Decide whether `tracked` should create or update a durable cross-asset relationship record beyond the per-analysis status.
+1. Decide whether `tracked` should create or update a durable cross-asset relationship record beyond the per-analysis status.
+2. Add relationship-level notes or review metadata for why a related workspace was accepted.
 3. Expand the deterministic entity dictionary with more ticker aliases and relationship seeds.
 4. Add tests for repeated mentions raising or preserving priority across analyses.
 5. Add later descriptive related-asset movement/sentiment comparison once enough related workspaces have observations.

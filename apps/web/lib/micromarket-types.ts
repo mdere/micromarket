@@ -48,6 +48,19 @@ export type TrackingNeedResponse = {
   model_version: string;
 };
 
+export type RelatedWorkspaceResponse = {
+  related_asset_id: string;
+  symbol: string;
+  name: string | null;
+  relationship_types: string[];
+  statuses: string[];
+  source_analysis_ids: string[];
+  evidence_snippets: string[];
+  priority_score: string;
+  mention_count: number;
+  latest_status: string;
+};
+
 export type MarketQuoteResponse = {
   provider: string;
   price: string | null;

@@ -73,6 +73,19 @@ class TrackingNeedUpdate(BaseModel):
     status: str
 
 
+class RelatedWorkspaceResponse(BaseModel):
+    related_asset_id: str
+    symbol: str
+    name: str | None = None
+    relationship_types: list[str] = Field(default_factory=list)
+    statuses: list[str] = Field(default_factory=list)
+    source_analysis_ids: list[str] = Field(default_factory=list)
+    evidence_snippets: list[str] = Field(default_factory=list)
+    priority_score: str
+    mention_count: int
+    latest_status: str
+
+
 class MarketQuoteResponse(BaseModel):
     id: str
     provider: str

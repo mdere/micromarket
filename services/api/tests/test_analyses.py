@@ -362,6 +362,22 @@ def test_update_tracking_need_status(tmp_path) -> None:
         assert fetched_needs[tracking_need["id"]]["related_asset_id"] == updated.json()[
             "related_asset_id"
         ]
+        related_workspaces = client.get("/analyses/related-workspaces?ticker=NVDA")
+        assert related_workspaces.status_code == 200
+        assert related_workspaces.json() == [
+            {
+                "related_asset_id": updated.json()["related_asset_id"],
+                "symbol": "TSM",
+                "name": "TSMC",
+                "relationship_types": ["supplier"],
+                "statuses": ["accepted"],
+                "source_analysis_ids": [response.json()["id"]],
+                "evidence_snippets": ["NVDA demand stayed strong as TSMC expanded foundry capacity."],
+                "priority_score": "0.90000",
+                "mention_count": 1,
+                "latest_status": "accepted",
+            }
+        ]
     finally:
         app.dependency_overrides.clear()
 
